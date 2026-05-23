@@ -37,46 +37,48 @@
             display: block;
             max-width: 100%;
             max-height: 100%;
-            object-fit: contain; /* Fotoğraflar ve ekran dikey/yatay modda düzgün dursun */
+            object-fit: contain;
             box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            z-index: 1;
         }
         
-        /* MOBİL DOKUNMATİK BUTONLAR */
+        /* MOBİL DOKUNMATİK BUTONLAR - GÖRÜNÜRLÜK GÜNCELLEMESİ */
         .touch-btn {
             position: absolute;
-            bottom: 25px;
-            width: 65px;
-            height: 65px;
-            background: rgba(255, 255, 255, 0.18);
-            border: 3px solid rgba(255, 255, 255, 0.45);
+            bottom: 30px;
+            width: 70px;
+            height: 70px;
+            background: #2c3e50; /* Tam görünür koyu arka plan */
+            border: 3px solid #ffffff; /* Parlak beyaz çerçeve */
             border-radius: 50%;
             color: white;
-            font-size: 26px;
+            font-size: 30px;
             font-weight: bold;
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 20;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            z-index: 999; /* Canvas'ın kesinlikle önünde olması için */
+            box-shadow: 0 6px 15px rgba(0,0,0,0.6);
+            touch-action: none; /* Mobilde çift tıklama yakınlaştırmasını önler */
         }
         .touch-btn:active {
-            background: rgba(255, 255, 255, 0.4);
-            transform: scale(0.93);
+            background: #34495e;
+            transform: scale(0.90);
         }
         
-        #leftBtn { left: 25px; }
-        #rightBtn { left: 105px; }
+        #leftBtn { left: 30px; }
+        #rightBtn { left: 120px; }
         
         #jumpBtn { 
-            right: 25px; 
-            width: 75px; 
-            height: 75px; 
-            background: rgba(192, 57, 43, 0.35); 
-            border-color: rgba(255,255,255,0.5);
-            font-size: 32px;
+            right: 30px; 
+            width: 80px; 
+            height: 80px; 
+            background: #e74c3c; /* Zıplama butonu belirgin kırmızı */
+            border-color: #ffffff;
+            font-size: 36px;
         }
         #jumpBtn:active {
-            background: rgba(231, 76, 60, 0.65);
+            background: #c0392b;
         }
         
         /* GELİŞMİŞ HUD ARAYÜZÜ */
@@ -92,10 +94,10 @@
             font-size: 11px;
             font-weight: bold;
             text-shadow: 2px 2px 3px #000;
-            background: rgba(0,0,0,0.7);
-            padding: 6px 10px;
+            background: rgba(0,0,0,0.85);
+            padding: 8px 12px;
             border-radius: 6px;
-            z-index: 30;
+            z-index: 1000;
             flex-wrap: wrap;
             gap: 5px;
         }
@@ -169,11 +171,10 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-// Yatay ve Dikey Mod Ekran Ayarı (Fotoğrafların ve canvasın düzgün durması için)
 function resizeGame() {
     const containerWidth = window.innerWidth;
     const containerHeight = window.innerHeight;
-    const gameRatio = 800 / 400; // Orijinal oyun en-boy oranı
+    const gameRatio = 800 / 400;
 
     if (containerWidth / containerHeight > gameRatio) {
         canvas.style.width = (containerHeight * gameRatio) + "px";
@@ -188,7 +189,7 @@ window.addEventListener("orientationchange", resizeGame);
 resizeGame();
 
 const characterList = [
-    { name: yeyet", color: "#f39c12", letter: "Y" },
+    { name: "yeyet", color: "#f39c12", letter: "Y" },
     { name: "Squeak", color: "#3498db", letter: "S" },
     { name: "Moosey", color: "#9b59b6", letter: "M" },
     { name: "Sugar", color: "#e74c3c", letter: "Su" },
@@ -196,7 +197,6 @@ const characterList = [
     { name: "Blinky", color: "#7f8c8d", letter: "B" }
 ];
 
-// KAYIT SİSTEMİ BAŞLANGICI
 let currentLevel = parseInt(localStorage.getItem("pets_level")) || 1;
 let unlockedCharIndex = parseInt(localStorage.getItem("pets_unlocked")) || 0;
 let activeCharIndex = 0;
@@ -373,6 +373,18 @@ function checkCollision(obj1, obj2) {
            obj1.y + (obj1.h || obj1.height) > obj2.y;
 }
 
+// KLAVYE DESTEĞİ (Bilgisayardan veya klavyeli tabletten test edebilmek için)
+window.addEventListener("keydown", (e) => {
+    if (e.code === "ArrowLeft" || e.code === "KeyA") keys.left = true;
+    if (e.code === "ArrowRight" || e.code === "KeyD") keys.right = true;
+    if (e.code === "ArrowUp" || e.code === "Space" || e.code === "KeyW") keys.jump = true;
+});
+window.addEventListener("keyup", (e) => {
+    if (e.code === "ArrowLeft" || e.code === "KeyA") keys.left = false;
+    if (e.code === "ArrowRight" || e.code === "KeyD") keys.right = false;
+    if (e.code === "ArrowUp" || e.code === "Space" || e.code === "KeyW") keys.jump = false;
+});
+
 function update() {
     let now = Date.now();
     if (now - lastTimeUpdate >= 1000) {
@@ -380,7 +392,6 @@ function update() {
         document.getElementById("timerText").innerText = levelTimer;
         lastTimeUpdate = now;
         
-        // SÜRE BİTTİ: Seviye geri düşmez, dot anahtarı alınmışsa sıfırlanıp eski yere döner!
         if (levelTimer <= 0) {
             resetPosition(true); 
             return;
@@ -442,7 +453,6 @@ function update() {
     if (player.x < 0) player.x = 0;
     if (player.x > canvas.width - player.w) player.x = canvas.width - player.w;
     
-    // Düştüğünde artık süre yenilenir ve seviye geriye gitmez
     if (player.y > canvas.height) resetPosition(true);
 
     activeLevel.hazards.forEach(h => {
@@ -482,7 +492,6 @@ function update() {
             h.xOffset = h.x - plat.x;
         }
 
-        // Kedilere veya diğer engellere çarparsa ölür (Süre yenilenir, seviye korunur)
         if (checkCollision(player, h) && (!platOrHazardBroken(h))) {
             resetPosition(true); 
         }
@@ -528,14 +537,12 @@ function update() {
     }
 }
 
-// Ölünce çağrılan ana sıfırlama fonksiyonu
 function resetPosition(resetTime) {
     player.x = 60;
     player.y = 200;
     player.velX = 0;
     player.velY = 0;
     
-    // Ölünce dot anahtarı toplanmışsa sıfırlanır ve arayüze yansır
     levelPieceCollected = false;
     document.getElementById("piecesText").innerText = "0 / 1";
     
@@ -621,4 +628,4 @@ gameLoop();
 </script>
 
 </body>
-  </html>
+    </html>
