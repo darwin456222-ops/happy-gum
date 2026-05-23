@@ -187,19 +187,19 @@ const player = {
 const gravity = 0.48;
 const friction = 0.80;
 
-// CANVAS İÇİ BUTONLAR
+// CANVAS İÇİ BUTONLARIN TANIMLANMASI (Hassas Konumlandırma)
 const canvasButtons = {
     left: { x: 55, y: 325, r: 35, active: false, label: "◀" },
     right: { x: 145, y: 325, r: 35, active: false, label: "▶" },
     jump: { x: 735, y: 315, r: 40, active: false, label: "▲" }
 };
 
-// YENİLENMİŞ GÜVENLİ DOKUNMATİK ALGILAMA SİSTEMİ (Takılı kalmayı önler)
+// GÜVENLİ DOKUNMATİK ALGILAMA SİSTEMİ (Her harekette parmakları baştan kontrol eder)
 function handleTouch(e) {
-    e.preventDefault(); 
+    e.preventDefault();
     const rect = canvas.getBoundingClientRect();
     
-    // Her dokunma hareketinde durumları sıfırlayıp güncel parmak pozisyonuna göre eşliyoruz
+    // Önce tüm butonların basılma durumlarını sıfırla
     keys.left = false;
     keys.right = false;
     keys.jump = false;
@@ -207,7 +207,7 @@ function handleTouch(e) {
     canvasButtons.right.active = false;
     canvasButtons.jump.active = false;
 
-    // Eğer ekranda aktif parmak varsa kontrolleri oku
+    // Ekranda o an duran tüm aktif parmakları tarayıp buton durumlarını eşle
     if (e.touches.length > 0) {
         for (let i = 0; i < e.touches.length; i++) {
             let touch = e.touches[i];
@@ -218,7 +218,7 @@ function handleTouch(e) {
             for (let key in canvasButtons) {
                 let btn = canvasButtons[key];
                 let dist = Math.hypot(touchX - btn.x, touchY - btn.y);
-                if (dist < btn.r + 10) { 
+                if (dist < btn.r + 12) { 
                     keys[key] = true;
                     btn.active = true;
                 }
@@ -227,10 +227,11 @@ function handleTouch(e) {
     }
 }
 
-// Parmağı ekrandan tamamen kaldırdığında veya iptal olduğunda tetiklenen net sıfırlama
+// Parmağını ekrandan çektiğinde tuşun takılı kalmasını önleyen sıfırlama fonksiyonu
 function clearTouch(e) {
     e.preventDefault();
     if (e.touches.length === 0) {
+        // Ekranda hiç parmak kalmadıysa her şeyi durdur
         keys.left = false;
         keys.right = false;
         keys.jump = false;
@@ -238,18 +239,18 @@ function clearTouch(e) {
         canvasButtons.right.active = false;
         canvasButtons.jump.active = false;
     } else {
-        // Eğer hâlâ basılı başka parmak varsa durumu yeniden hesapla
+        // Ekranda hâlâ basılı tutulan başka bir parmak varsa pozisyonları güncelle
         handleTouch(e);
     }
 }
 
-// Event Listener bağlantıları
+// Dokunmatik Ekran Event Listenerları
 canvas.addEventListener("touchstart", handleTouch, { passive: false });
 canvas.addEventListener("touchmove", handleTouch, { passive: false });
 canvas.addEventListener("touchend", clearTouch, { passive: false });
 canvas.addEventListener("touchcancel", clearTouch, { passive: false });
 
-// FARE (MOUSE) KONTROLLERİ - TAKILMAYI ÖNLER
+// FARE (MOUSE) DESTEĞİ VE GÜVENLİĞİ
 function handleMouse(e, isDown) {
     const rect = canvas.getBoundingClientRect();
     let mouseX = ((e.clientX - rect.left) / rect.width) * canvas.width;
@@ -272,6 +273,98 @@ function handleMouse(e, isDown) {
 canvas.addEventListener("mousedown", (e) => handleMouse(e, true));
 canvas.addEventListener("mouseup", (e) => handleMouse(e, false));
 canvas.addEventListener("mouseleave", (e) => handleMouse(e, false));
+
+function generateLevel(lvl) {
+    let difficulty = Math.min(lvl / 25, 5); 
+    let seed = lvl * 1543;
+    function randomSeed() {
+        let x = Math.sin(seed++) * 10000;
+        return x - Math.floor(x);
+    }
+
+    let levelData = {
+        platforms: [{ x: 0, y: 340, width: 140, height: 60, type: 'normal' }],
+        dotPiece: { x: 350, y: 180, width: 24, height: 24 },
+        portal: { x: 745, y: 280, width: 45, height: 60 },
+        hazards: []
+    };
+
+    let currentX = 160;
+    let currentY = 240 + Math.floor(randomSeed() * 60);
+
+    for (let i = 0; i < 4; i++) {
+        let pWidth = Math.max(125 - (difficulty * 12) - Math.floor(randomSeed() * 25), 50);
+        let stepGap = 115 + (difficulty * 10) + Math.floor(randomSeed() * 30);
+        
+        let pType = 'normal';
+        let rType = randomSeed();
+        if (lvl > 4 && rType > 0.65) pType = 'crumbling';
+        if (lvl > 10 && rType <= 0.35) pType = 'moving';
+        if (lvl > 25 && rType > 0.35 && rType <= 0.65) pType = 'crumbling';
+
+        levelData.platforms.push({ 
+            x: currentX, 
+            y: currentY, 
+            width: pWidth, 
+            height: 15, 
+            type: pType,
+            startY: currentY,
+            startX: currentX,
+            range: 35 + (difficulty * 12) + Math.floor(randomSeed() * 20),
+            speed: 0.015 + (difficulty * 0.008) + (randomSeed() * 0.01),
+            angle: randomSeed() * Math.PI * 2,
+            moveDir: randomSeed() > 0.5 ? 'vertical' : 'horizontal',
+            stepped: false,
+            stepTime: 0,
+            broken: false
+        });
+
+        if (lvl > 3 && randomSeed() > 0.3) {
+            levelData.hazards.push({ 
+                x: currentX + 10, 
+                y: currentY - 26, 
+                width: 26, 
+                height: 26, 
+                type: 'cat',
+                platIndex: levelData.platforms.length - 1,
+                dir: randomSeed() > 0.5 ? 1 : -1,
+                speed: 1.1 + (difficulty * 0.35) + (randomSeed() * 0.5),
+                velY: 0,
+                isGrounded: true,
+                jumpTimer: 40 + Math.floor(randomSeed() * 100)
+            });
+        }
+        
+        if (lvl > 15 && randomSeed() > 0.7 && pType !== 'crumbling') {
+            levelData.hazards.push({ 
+                x: currentX + Math.floor(randomSeed() * (pWidth - 20)), 
+                y: currentY - 40 - Math.floor(randomSeed() * 30), 
+                width: 22, 
+                height: 22, 
+                type: 'darkness' 
+            });
+        }
+
+        if (i === Math.floor(randomSeed() * 3) + 1 || i === 2) {
+            levelData.dotPiece.x = currentX + (pWidth / 2) - 12;
+            levelData.dotPiece.y = currentY - 35 - Math.floor(randomSeed() * 20);
+        }
+
+        currentX += stepGap;
+        currentY += Math.floor(randomSeed() * 90) - 45;
+        currentY = Math.max(140, Math.min(currentY, 310));
+    }
+
+    levelData.platforms.push({ x: 730, y: 340, width: 70, height: 60, type: 'normal' });
+    return levelData;
+}
+
+let activeLevel = generateLevel(currentLevel);
+document.getElementById("levelText").innerText = currentLevel;
+
+const changeBtn = document.getElementById("changeCharBtn");
+changeBtn.innerText = characterList[activeCharIndex].name;
+changeBtn.style.backgroundColor = characterList[activeCharIndex].color;
 
 changeBtn.addEventListener("click", () => {
     activeCharIndex++;
@@ -589,4 +682,4 @@ gameLoop();
 </script>
 
 </body>
-</html>
+    </html>
