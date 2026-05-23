@@ -24,64 +24,74 @@
         }
         #gameContainer {
             position: relative;
-            width: 100vw;
-            height: 100vh;
-            background: #111a24;
+            /* Ekranın yapısına göre en yüksek esnekliği sağlar */
+            width: 100%;
+            height: 100%;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            background: #111a24;
         }
+        
+        /* CANVAS VE BUTON SARMALAYICI (Birlikte ölçeklenirler) */
+        #canvasWrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
         canvas {
             background: #14354f;
             display: block;
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
             box-shadow: 0 0 20px rgba(0,0,0,0.8);
             z-index: 1;
         }
         
-        /* MOBİL DOKUNMATİK BUTONLAR - GÖRÜNÜRLÜK GÜNCELLEMESİ */
+        /* DOKUNMATİK BUTONLAR - ARTIK CANVAS'A GÖRE SABİTLENDİ */
         .touch-btn {
             position: absolute;
-            bottom: 30px;
-            width: 70px;
-            height: 70px;
-            background: #2c3e50; /* Tam görünür koyu arka plan */
-            border: 3px solid #ffffff; /* Parlak beyaz çerçeve */
+            bottom: 15px; /* Canvas tabanından yükseklik */
+            width: 75px;
+            height: 75px;
+            background: #2c3e50;
+            border: 3px solid #ffffff;
             border-radius: 50%;
             color: white;
-            font-size: 30px;
+            font-size: 32px;
             font-weight: bold;
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 999; /* Canvas'ın kesinlikle önünde olması için */
+            z-index: 999; /* Kesinlikle en üstte tutar */
             box-shadow: 0 6px 15px rgba(0,0,0,0.6);
-            touch-action: none; /* Mobilde çift tıklama yakınlaştırmasını önler */
+            touch-action: none;
         }
         .touch-btn:active {
             background: #34495e;
             transform: scale(0.90);
         }
         
-        #leftBtn { left: 30px; }
-        #rightBtn { left: 120px; }
+        /* Sol ve Sağ yön butonları Canvas'ın sol köşesinde */
+        #leftBtn { left: 15px; }
+        #rightBtn { left: 105px; }
         
+        /* Zıplama butonu Canvas'ın sağ köşesinde */
         #jumpBtn { 
-            right: 30px; 
-            width: 80px; 
-            height: 80px; 
-            background: #e74c3c; /* Zıplama butonu belirgin kırmızı */
+            right: 15px; 
+            width: 85px; 
+            height: 85px; 
+            background: #e74c3c;
             border-color: #ffffff;
-            font-size: 36px;
+            font-size: 38px;
+            bottom: 15px;
         }
         #jumpBtn:active {
             background: #c0392b;
         }
         
-        /* GELİŞMİŞ HUD ARAYÜZÜ */
+        /* GELİŞMİŞ HUD ARAYÜZÜ - CANVAS'IN ÜSTÜNE SABİTLENDİ */
         #hud {
             position: absolute;
             top: 10px;
@@ -98,7 +108,6 @@
             padding: 8px 12px;
             border-radius: 6px;
             z-index: 1000;
-            flex-wrap: wrap;
             gap: 5px;
         }
         
@@ -152,37 +161,52 @@
 <body>
 
 <div id="gameContainer">
-    <div id="hud">
-        <div class="hud-item">Svy: <span id="levelText">1</span>/150</div>
-        <div class="hud-item">Süre: <span id="timeBadge"><span id="timerText">25</span>s</span></div>
-        <div class="hud-item">Krk: <button id="changeCharBtn">Yeyet</button></div>
-        <div class="hud-item">Parça: <span id="piecesText">0/1</span></div>
-        <button id="resetGameBtn" title="Oyunu Sıfırla">Sıfırla ❌</button>
+    <!-- wrapper sayesinde butonlar ve hud her zaman canvas ile aynı boyutta kalır -->
+    <div id="canvasWrapper">
+        <div id="hud">
+            <div class="hud-item">Svy: <span id="levelText">1</span>/150</div>
+            <div class="hud-item">Süre: <span id="timeBadge"><span id="timerText">25</span>s</span></div>
+            <div class="hud-item">Krk: <button id="changeCharBtn">Yeyet</button></div>
+            <div class="hud-item">Parça: <span id="piecesText">0/1</span></div>
+            <button id="resetGameBtn" title="Oyunu Sıfırla">Sıfırla ❌</button>
+        </div>
+        
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
+        
+        <div class="touch-btn" id="leftBtn">◀</div>
+        <div class="touch-btn" id="rightBtn">▶</div>
+        <div class="touch-btn" id="jumpBtn">▲</div>
     </div>
-    
-    <canvas id="gameCanvas" width="800" height="400"></canvas>
-    
-    <div class="touch-btn" id="leftBtn">◀</div>
-    <div class="touch-btn" id="rightBtn">▶</div>
-    <div class="touch-btn" id="jumpBtn">▲</div>
 </div>
 
 <script>
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
+const wrapper = document.getElementById("canvasWrapper");
 
+// Ekran dikey veya yatay olduğunda wrapper yapısını ölçekler
 function resizeGame() {
     const containerWidth = window.innerWidth;
     const containerHeight = window.innerHeight;
     const gameRatio = 800 / 400;
 
+    let targetWidth, targetHeight;
+
     if (containerWidth / containerHeight > gameRatio) {
-        canvas.style.width = (containerHeight * gameRatio) + "px";
-        canvas.style.height = containerHeight + "px";
+        targetHeight = containerHeight;
+        targetWidth = containerHeight * gameRatio;
     } else {
-        canvas.style.width = containerWidth + "px";
-        canvas.style.height = (containerWidth / gameRatio) + "px";
+        targetWidth = containerWidth;
+        targetHeight = containerWidth / gameRatio;
     }
+
+    // Canvas boyutunu ayarla
+    canvas.style.width = targetWidth + "px";
+    canvas.style.height = targetHeight + "px";
+
+    // Sarmalayıcı kutuyu da tam olarak canvas boyutuna getirir (Butonların taşmasını önler)
+    wrapper.style.width = targetWidth + "px";
+    wrapper.style.height = targetHeight + "px";
 }
 window.addEventListener("resize", resizeGame);
 window.addEventListener("orientationchange", resizeGame);
@@ -373,7 +397,6 @@ function checkCollision(obj1, obj2) {
            obj1.y + (obj1.h || obj1.height) > obj2.y;
 }
 
-// KLAVYE DESTEĞİ (Bilgisayardan veya klavyeli tabletten test edebilmek için)
 window.addEventListener("keydown", (e) => {
     if (e.code === "ArrowLeft" || e.code === "KeyA") keys.left = true;
     if (e.code === "ArrowRight" || e.code === "KeyD") keys.right = true;
