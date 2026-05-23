@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>The Pets: Hardcore Arena V2</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #0d0d11;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+        }
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: #111a24;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        canvas {
+            background: #14354f;
+            display: block;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain; /* Fotoğraflar ve ekran dikey/yatay modda düzgün dursun */
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+        
+        /* MOBİL DOKUNMATİK BUTONLAR */
+        .touch-btn {
+            position: absolute;
+            bottom: 25px;
+            width: 65px;
+            height: 65px;
+            background: rgba(255, 255, 255, 0.18);
+            border: 3px solid rgba(255, 255, 255, 0.45);
+            border-radius: 50%;
+            color: white;
+            font-size: 26px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        .touch-btn:active {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(0.93);
+        }
+        
+        #leftBtn { left: 25px; }
+        #rightBtn { left: 105px; }
+        
+        #jumpBtn { 
+            right: 25px; 
+            width: 75px; 
+            height: 75px; 
+            background: rgba(192, 57, 43, 0.35); 
+            border-color: rgba(255,255,255,0.5);
+            font-size: 32px;
+        }
+        #jumpBtn:active {
+            background: rgba(231, 76, 60, 0.65);
+        }
+        
+        /* GELİŞMİŞ HUD ARAYÜZÜ */
+        #hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            text-shadow: 2px 2px 3px #000;
+            background: rgba(0,0,0,0.7);
+            padding: 6px 10px;
+            border-radius: 6px;
+            z-index: 30;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        
+        .hud-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        #timeBadge {
+            color: #ff4757;
+            background: rgba(255, 71, 87, 0.25);
+            padding: 1px 6px;
+            border-radius: 4px;
+        }
+        
+        #changeCharBtn {
+            background: #2ed573;
+            color: white;
+            border: 1px solid #fff;
+            padding: 2px 7px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        
+        #changeCharBtn.active {
+            animation: pulse 0.5s infinite alternate;
+            background: #ffa500 !important;
+        }
+        
+        #resetGameBtn {
+            background: #7f8c8d;
+            color: white;
+            border: none;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 10px;
+            cursor: pointer;
+        }
+        #resetGameBtn:active { background: #c0392b; }
+        
+        @keyframes pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.06); }
+        }
+    </style>
+</head>
+<body>
+
+<div id="gameContainer">
+    <div id="hud">
+        <div class="hud-item">Svy: <span id="levelText">1</span>/150</div>
+        <div class="hud-item">Süre: <span id="timeBadge"><span id="timerText">25</span>s</span></div>
+        <div class="hud-item">Krk: <button id="changeCharBtn">Yeyet</button></div>
+        <div class="hud-item">Parça: <span id="piecesText">0/1</span></div>
+        <button id="resetGameBtn" title="Oyunu Sıfırla">Sıfırla ❌</button>
+    </div>
+    
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    
+    <div class="touch-btn" id="leftBtn">◀</div>
+    <div class="touch-btn" id="rightBtn">▶</div>
+    <div class="touch-btn" id="jumpBtn">▲</div>
+</div>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+// Yatay ve Dikey Mod Ekran Ayarı (Fotoğrafların ve canvasın düzgün durması için)
+function resizeGame() {
+    const containerWidth = window.innerWidth;
+    const containerHeight = window.innerHeight;
+    const gameRatio = 800 / 400; // Orijinal oyun en-boy oranı
+
+    if (containerWidth / containerHeight > gameRatio) {
+        canvas.style.width = (containerHeight * gameRatio) + "px";
+        canvas.style.height = containerHeight + "px";
+    } else {
+        canvas.style.width = containerWidth + "px";
+        canvas.style.height = (containerWidth / gameRatio) + "px";
+    }
+}
+window.addEventListener("resize", resizeGame);
+window.addEventListener("orientationchange", resizeGame);
+resizeGame();
+
+const characterList = [
+    { name: "Yeyet", color: "#f39c12", letter: "Y" },
+    { name: "Squeak", color: "#3498db", letter: "S" },
+    { name: "Moosey", color: "#9b59b6", letter: "M" },
+    { name: "Sugar", color: "#e74c3c", letter: "Su" },
+    { name: "Dot", color: "#d35400", letter: "D" },
+    { name: "Blinky", color: "#7f8c8d", letter: "B" }
+];
+
+// KAYIT SİSTEMİ BAŞLANGICI
+let currentLevel = parseInt(localStorage.getItem("pets_level")) || 1;
+let unlockedCharIndex = parseInt(localStorage.getItem("pets_unlocked")) || 0;
+let activeCharIndex = 0;
+
+function saveProgress() {
+    localStorage.setItem("pets_level", currentLevel);
+    localStorage.setItem("pets_unlocked", unlockedCharIndex);
+}
+
+const images = {};
+characterList.forEach(char => {
+    images[char.name] = new Image();
+    images[char.name].src = `${char.name}.jpg`;
+});
+images.Dot = new Image();
+images.Dot.src = 'Dot.jpg';
+
+let levelPieceCollected = false;
+let keys = { left: false, right: false, jump: false };
+let levelTimer = 25; 
+let lastTimeUpdate = Date.now();
+
+const player = {
+    x: 60,
+    y: 200,
+    w: 34,
+    h: 34,
+    velX: 0,
+    velY: 0,
+    jumping: false,
+    grounded: false,
+    speed: 4.4
+};
+
+const gravity = 0.48;
+const friction = 0.80;
+
+function generateLevel(lvl) {
+    let difficulty = Math.min(lvl / 25, 5); 
+    let seed = lvl * 1543;
+    function randomSeed() {
+        let x = Math.sin(seed++) * 10000;
+        return x - Math.floor(x);
+    }
+
+    let levelData = {
+        platforms: [{ x: 0, y: 340, width: 140, height: 60, type: 'normal' }],
+        dotPiece: { x: 350, y: 180, width: 24, height: 24 },
+        portal: { x: 745, y: 280, width: 45, height: 60 },
+        hazards: []
+    };
+
+    let currentX = 160;
+    let currentY = 240 + Math.floor(randomSeed() * 60);
+
+    for (let i = 0; i < 4; i++) {
+        let pWidth = Math.max(125 - (difficulty * 12) - Math.floor(randomSeed() * 25), 50);
+        let stepGap = 115 + (difficulty * 10) + Math.floor(randomSeed() * 30);
+        
+        let pType = 'normal';
+        let rType = randomSeed();
+        if (lvl > 4 && rType > 0.65) pType = 'crumbling';
+        if (lvl > 10 && rType <= 0.35) pType = 'moving';
+        if (lvl > 25 && rType > 0.35 && rType <= 0.65) pType = 'crumbling';
+
+        levelData.platforms.push({ 
+            x: currentX, 
+            y: currentY, 
+            width: pWidth, 
+            height: 15, 
+            type: pType,
+            startY: currentY,
+            startX: currentX,
+            range: 35 + (difficulty * 12) + Math.floor(randomSeed() * 20),
+            speed: 0.015 + (difficulty * 0.008) + (randomSeed() * 0.01),
+            angle: randomSeed() * Math.PI * 2,
+            moveDir: randomSeed() > 0.5 ? 'vertical' : 'horizontal',
+            stepped: false,
+            stepTime: 0,
+            broken: false
+        });
+
+        if (lvl > 3 && randomSeed() > 0.3) {
+            levelData.hazards.push({ 
+                x: currentX + 10, 
+                y: currentY - 26, 
+                width: 26, 
+                height: 26, 
+                type: 'cat',
+                platIndex: levelData.platforms.length - 1,
+                dir: randomSeed() > 0.5 ? 1 : -1,
+                speed: 1.1 + (difficulty * 0.35) + (randomSeed() * 0.5),
+                velY: 0,
+                isGrounded: true,
+                jumpTimer: 40 + Math.floor(randomSeed() * 100)
+            });
+        }
+        
+        if (lvl > 15 && randomSeed() > 0.7 && pType !== 'crumbling') {
+            levelData.hazards.push({ 
+                x: currentX + Math.floor(randomSeed() * (pWidth - 20)), 
+                y: currentY - 40 - Math.floor(randomSeed() * 30), 
+                width: 22, 
+                height: 22, 
+                type: 'darkness' 
+            });
+        }
+
+        if (i === Math.floor(randomSeed() * 3) + 1 || i === 2) {
+            levelData.dotPiece.x = currentX + (pWidth / 2) - 12;
+            levelData.dotPiece.y = currentY - 35 - Math.floor(randomSeed() * 20);
+        }
+
+        currentX += stepGap;
+        currentY += Math.floor(randomSeed() * 90) - 45;
+        currentY = Math.max(140, Math.min(currentY, 310));
+    }
+
+    levelData.platforms.push({ x: 730, y: 340, width: 70, height: 60, type: 'normal' });
+    return levelData;
+}
+
+let activeLevel = generateLevel(currentLevel);
+document.getElementById("levelText").innerText = currentLevel;
+
+const changeBtn = document.getElementById("changeCharBtn");
+changeBtn.innerText = characterList[activeCharIndex].name;
+changeBtn.style.backgroundColor = characterList[activeCharIndex].color;
+
+setupButton("leftBtn", "left");
+setupButton("rightBtn", "right");
+setupButton("jumpBtn", "jump");
+
+function setupButton(id, key) {
+    const btn = document.getElementById(id);
+    btn.addEventListener("touchstart", (e) => { e.preventDefault(); keys[key] = true; });
+    btn.addEventListener("touchend", (e) => { e.preventDefault(); keys[key] = false; });
+    btn.addEventListener("mousedown", () => keys[key] = true);
+    btn.addEventListener("mouseup", () => keys[key] = false);
+}
+
+changeBtn.addEventListener("click", () => {
+    activeCharIndex++;
+    if (activeCharIndex > unlockedCharIndex) {
+        activeCharIndex = 0; 
+    }
+    changeBtn.innerText = characterList[activeCharIndex].name;
+    changeBtn.style.backgroundColor = characterList[activeCharIndex].color;
+    changeBtn.classList.remove("active");
+});
+
+document.getElementById("resetGameBtn").addEventListener("click", () => {
+    if(confirm("Tüm ilerlemeni ve açtığın karakterleri sıfırlamak istediğine emin misin?")) {
+        localStorage.clear();
+        currentLevel = 1;
+        unlockedCharIndex = 0;
+        activeCharIndex = 0;
+        levelTimer = 25;
+        levelPieceCollected = false;
+        activeLevel = generateLevel(currentLevel);
+        document.getElementById("levelText").innerText = currentLevel;
+        document.getElementById("piecesText").innerText = "0 / 1";
+        changeBtn.innerText = characterList[activeCharIndex].name;
+        changeBtn.style.backgroundColor = characterList[activeCharIndex].color;
+        changeBtn.classList.remove("active");
+        resetPosition(true); 
+    }
+});
+
+function checkCollision(obj1, obj2) {
+    return obj1.x < obj2.x + obj2.width &&
+           obj1.x + (obj1.w || obj1.width) > obj2.x &&
+           obj1.y < obj2.y + obj2.height &&
+           obj1.y + (obj1.h || obj1.height) > obj2.y;
+}
+
+function update() {
+    let now = Date.now();
+    if (now - lastTimeUpdate >= 1000) {
+        levelTimer--;
+        document.getElementById("timerText").innerText = levelTimer;
+        lastTimeUpdate = now;
+        
+        // SÜRE BİTTİ: Seviye geri düşmez, dot anahtarı alınmışsa sıfırlanıp eski yere döner!
+        if (levelTimer <= 0) {
+            resetPosition(true); 
+            return;
+        }
+    }
+
+    if (keys.left) { if (player.velX > -player.speed) player.velX -= 0.85; }
+    if (keys.right) { if (player.velX < player.speed) player.velX += 0.85; }
+    if (keys.jump && !player.jumping && player.grounded) {
+        player.jumping = true;
+        player.grounded = false;
+        player.velY = -11.2;
+    }
+
+    player.velX *= friction;
+    player.velY += gravity;
+    player.grounded = false;
+
+    activeLevel.platforms.forEach(p => {
+        if (p.broken) return;
+
+        if (p.type === 'moving') {
+            p.angle += p.speed;
+            if (p.moveDir === 'vertical') {
+                p.y = p.startY + Math.sin(p.angle) * p.range;
+            } else {
+                p.x = p.startX + Math.sin(p.angle) * p.range;
+            }
+        }
+
+        if (p.type === 'crumbling' && p.stepped) {
+            if (Date.now() - p.stepTime > 1000) {
+                p.broken = true; 
+            }
+        }
+
+        if (player.x + player.w > p.x && player.x < p.x + p.width &&
+            player.y + player.h <= p.y + 10 && player.y + player.h + player.velY >= p.y) {
+            
+            player.grounded = true;
+            player.jumping = false;
+            player.velY = 0;
+            player.y = p.y - player.h;
+
+            if (p.type === 'moving' && p.moveDir === 'horizontal') {
+                player.x += Math.cos(p.angle) * (p.range * p.speed); 
+            }
+
+            if (p.type === 'crumbling' && !p.stepped) {
+                p.stepped = true;
+                p.stepTime = Date.now();
+            }
+        }
+    });
+
+    player.x += player.velX;
+    player.y += player.velY;
+
+    if (player.x < 0) player.x = 0;
+    if (player.x > canvas.width - player.w) player.x = canvas.width - player.w;
+    
+    // Düştüğünde artık süre yenilenir ve seviye geriye gitmez
+    if (player.y > canvas.height) resetPosition(true);
+
+    activeLevel.hazards.forEach(h => {
+        if (h.type === 'cat') {
+            let plat = activeLevel.platforms[h.platIndex];
+            if (plat.broken) {
+                h.y += 5;
+                return;
+            }
+
+            if (plat.type === 'moving' && plat.moveDir === 'horizontal') {
+                h.x = plat.x + (h.xOffset || 10);
+            } else {
+                h.x += h.speed * h.dir;
+                if (h.x <= plat.x || h.x + h.width >= plat.x + plat.width) {
+                    h.dir *= -1;
+                }
+            }
+            h.y = plat.y - h.height;
+
+            h.jumpTimer--;
+            if (h.jumpTimer <= 0 && h.isGrounded) {
+                h.velY = -6.5;
+                h.isGrounded = false;
+                h.jumpTimer = 70 + Math.random() * 100;
+            }
+
+            if (!h.isGrounded) {
+                h.velY += 0.32;
+                h.y += h.velY;
+                if (h.y >= plat.y - h.height) {
+                    h.y = plat.y - h.height;
+                    h.velY = 0;
+                    h.isGrounded = true;
+                }
+            }
+            h.xOffset = h.x - plat.x;
+        }
+
+        // Kedilere veya diğer engellere çarparsa ölür (Süre yenilenir, seviye korunur)
+        if (checkCollision(player, h) && (!platOrHazardBroken(h))) {
+            resetPosition(true); 
+        }
+    });
+
+    function platOrHazardBroken(h) {
+        if (h.platIndex !== undefined && activeLevel.platforms[h.platIndex].broken) return true;
+        return false;
+    }
+
+    if (!levelPieceCollected && checkCollision(player, activeLevel.dotPiece)) {
+        levelPieceCollected = true;
+        document.getElementById("piecesText").innerText = "1 / 1";
+    }
+
+    if (levelPieceCollected && checkCollision(player, activeLevel.portal)) {
+        currentLevel++;
+        saveProgress(); 
+        
+        if (currentLevel <= 150) {
+            activeLevel = generateLevel(currentLevel);
+            levelPieceCollected = false;
+            document.getElementById("levelText").innerText = currentLevel;
+            document.getElementById("piecesText").innerText = "0 / 1";
+            canvas.style.background = `hsl(${(currentLevel * 55) % 360}, 30%, 22%)`;
+
+            if (currentLevel % 5 === 1 && currentLevel > 1) {
+                let nextTargetIndex = Math.floor((currentLevel - 1) / 5);
+                if (nextTargetIndex < characterList.length) {
+                    unlockedCharIndex = nextTargetIndex;
+                    saveProgress();
+                    if (unlockedCharIndex > activeCharIndex) {
+                        changeBtn.classList.add("active");
+                    }
+                }
+            }
+            resetPosition(true); 
+        } else {
+            alert("TEBRİKLER! Tüm serüveni tamamladın! 🏆");
+            currentLevel = 1;
+            saveProgress();
+        }
+    }
+}
+
+// Ölünce çağrılan ana sıfırlama fonksiyonu
+function resetPosition(resetTime) {
+    player.x = 60;
+    player.y = 200;
+    player.velX = 0;
+    player.velY = 0;
+    
+    // Ölünce dot anahtarı toplanmışsa sıfırlanır ve arayüze yansır
+    levelPieceCollected = false;
+    document.getElementById("piecesText").innerText = "0 / 1";
+    
+    if (resetTime) {
+        levelTimer = 25; 
+        document.getElementById("timerText").innerText = levelTimer;
+    }
+    
+    activeLevel.platforms.forEach(p => {
+        if (p.type === 'crumbling') {
+            p.stepped = false;
+            p.broken = false;
+        }
+    });
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    activeLevel.platforms.forEach(p => {
+        if (p.broken) return;
+
+        if (p.type === 'normal') ctx.fillStyle = "#2ecc71"; 
+        else if (p.type === 'moving') ctx.fillStyle = "#3498db"; 
+        else if (p.type === 'crumbling') {
+            if (p.stepped) {
+                let elapsed = Date.now() - p.stepTime;
+                ctx.fillStyle = elapsed > 650 ? "#e74c3c" : "#f1c40f";
+            } else {
+                ctx.fillStyle = "#e67e22"; 
+            }
+        }
+        ctx.fillRect(p.x, p.y, p.width, p.height);
+    });
+
+    activeLevel.hazards.forEach(h => {
+        if (h.platIndex !== undefined && activeLevel.platforms[h.platIndex].broken) return;
+
+        if (h.type === 'cat') {
+            ctx.fillStyle = '#ff4757'; 
+            ctx.fillRect(h.x, h.y, h.width, h.height);
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(h.x + (h.dir == 1 ? 16 : 4), h.y + 6, 5, 5);
+        } else {
+            ctx.fillStyle = '#000000'; 
+            ctx.fillRect(h.x, h.y, h.width, h.height);
+        }
+    });
+
+    if (!levelPieceCollected) {
+        if (images.Dot.complete && images.Dot.naturalWidth !== 0) {
+            ctx.drawImage(images.Dot, activeLevel.dotPiece.x, activeLevel.dotPiece.y, activeLevel.dotPiece.width, activeLevel.dotPiece.height);
+        } else {
+            ctx.fillStyle = "#00ffff";
+            ctx.beginPath();
+            ctx.arc(activeLevel.dotPiece.x + 12, activeLevel.dotPiece.y + 12, 10, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    ctx.fillStyle = levelPieceCollected ? "#9b59b6" : "#7f8c8d";
+    ctx.fillRect(activeLevel.portal.x, activeLevel.portal.y, activeLevel.portal.width, activeLevel.portal.height);
+
+    let curChar = characterList[activeCharIndex];
+    if (images[curChar.name] && images[curChar.name].complete && images[curChar.name].naturalWidth !== 0) {
+        ctx.drawImage(images[curChar.name], player.x, player.y, player.w, player.h);
+    } else {
+        ctx.fillStyle = curChar.color;
+        ctx.fillRect(player.x, player.y, player.w, player.h);
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 11px Arial";
+        ctx.fillText(curChar.letter, player.x + (player.w/2) - 5, player.y + 21);
+    }
+}
+
+function gameLoop() {
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+</script>
+
+</body>
+  </html>
