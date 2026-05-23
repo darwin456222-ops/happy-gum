@@ -24,24 +24,13 @@
         }
         #gameContainer {
             position: relative;
-            /* Ekranın yapısına göre en yüksek esnekliği sağlar */
             width: 100%;
             height: 100%;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
             background: #111a24;
         }
-        
-        /* CANVAS VE BUTON SARMALAYICI (Birlikte ölçeklenirler) */
-        #canvasWrapper {
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
         canvas {
             background: #14354f;
             display: block;
@@ -49,49 +38,7 @@
             z-index: 1;
         }
         
-        /* DOKUNMATİK BUTONLAR - ARTIK CANVAS'A GÖRE SABİTLENDİ */
-        .touch-btn {
-            position: absolute;
-            bottom: 15px; /* Canvas tabanından yükseklik */
-            width: 75px;
-            height: 75px;
-            background: #2c3e50;
-            border: 3px solid #ffffff;
-            border-radius: 50%;
-            color: white;
-            font-size: 32px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 999; /* Kesinlikle en üstte tutar */
-            box-shadow: 0 6px 15px rgba(0,0,0,0.6);
-            touch-action: none;
-        }
-        .touch-btn:active {
-            background: #34495e;
-            transform: scale(0.90);
-        }
-        
-        /* Sol ve Sağ yön butonları Canvas'ın sol köşesinde */
-        #leftBtn { left: 15px; }
-        #rightBtn { left: 105px; }
-        
-        /* Zıplama butonu Canvas'ın sağ köşesinde */
-        #jumpBtn { 
-            right: 15px; 
-            width: 85px; 
-            height: 85px; 
-            background: #e74c3c;
-            border-color: #ffffff;
-            font-size: 38px;
-            bottom: 15px;
-        }
-        #jumpBtn:active {
-            background: #c0392b;
-        }
-        
-        /* GELİŞMİŞ HUD ARAYÜZÜ - CANVAS'IN ÜSTÜNE SABİTLENDİ */
+        /* GELİŞMİŞ HUD ARAYÜZÜ */
         #hud {
             position: absolute;
             top: 10px;
@@ -109,6 +56,7 @@
             border-radius: 6px;
             z-index: 1000;
             gap: 5px;
+            pointer-events: auto;
         }
         
         .hud-item {
@@ -161,64 +109,45 @@
 <body>
 
 <div id="gameContainer">
-    <!-- wrapper sayesinde butonlar ve hud her zaman canvas ile aynı boyutta kalır -->
-    <div id="canvasWrapper">
-        <div id="hud">
-            <div class="hud-item">Svy: <span id="levelText">1</span>/150</div>
-            <div class="hud-item">Süre: <span id="timeBadge"><span id="timerText">25</span>s</span></div>
-            <div class="hud-item">Krk: <button id="changeCharBtn">Yeyet</button></div>
-            <div class="hud-item">Parça: <span id="piecesText">0/1</span></div>
-            <button id="resetGameBtn" title="Oyunu Sıfırla">Sıfırla ❌</button>
-        </div>
-        
-        <canvas id="gameCanvas" width="800" height="400"></canvas>
-        
-        <div class="touch-btn" id="leftBtn">◀</div>
-        <div class="touch-btn" id="rightBtn">▶</div>
-        <div class="touch-btn" id="jumpBtn">▲</div>
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    
+    <div id="hud">
+        <div class="hud-item">Svy: <span id="levelText">1</span>/150</div>
+        <div class="hud-item">Süre: <span id="timeBadge"><span id="timerText">25</span>s</span></div>
+        <div class="hud-item">Krk: <button id="changeCharBtn">Yeyet</button></div>
+        <div class="hud-item">Parça: <span id="piecesText">0/1</span></div>
+        <button id="resetGameBtn" title="Oyunu Sıfırla">Sıfırla ❌</button>
     </div>
 </div>
 
 <script>
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-const wrapper = document.getElementById("canvasWrapper");
 
-// Ekran dikey veya yatay olduğunda wrapper yapısını ölçekler
 function resizeGame() {
     const containerWidth = window.innerWidth;
     const containerHeight = window.innerHeight;
     const gameRatio = 800 / 400;
 
-    let targetWidth, targetHeight;
-
     if (containerWidth / containerHeight > gameRatio) {
-        targetHeight = containerHeight;
-        targetWidth = containerHeight * gameRatio;
+        canvas.style.width = (containerHeight * gameRatio) + "px";
+        canvas.style.height = containerHeight + "px";
     } else {
-        targetWidth = containerWidth;
-        targetHeight = containerWidth / gameRatio;
+        canvas.style.width = containerWidth + "px";
+        canvas.style.height = (containerWidth / gameRatio) + "px";
     }
-
-    // Canvas boyutunu ayarla
-    canvas.style.width = targetWidth + "px";
-    canvas.style.height = targetHeight + "px";
-
-    // Sarmalayıcı kutuyu da tam olarak canvas boyutuna getirir (Butonların taşmasını önler)
-    wrapper.style.width = targetWidth + "px";
-    wrapper.style.height = targetHeight + "px";
 }
 window.addEventListener("resize", resizeGame);
 window.addEventListener("orientationchange", resizeGame);
 resizeGame();
 
 const characterList = [
-    { name: "yeyet", color: "#f39c12", letter: "Y" },
+    { name: "Yeyet", color: "#f39c12", letter: "Y" },
     { name: "Squeak", color: "#3498db", letter: "S" },
     { name: "Moosey", color: "#9b59b6", letter: "M" },
     { name: "Sugar", color: "#e74c3c", letter: "Su" },
     { name: "Dot", color: "#d35400", letter: "D" },
-    { name: "Blinky", color: "#7f8c8d", letter: "B" }
+    { name: "blinky", color: "#7f8c8d", letter: "B" }
 ];
 
 let currentLevel = parseInt(localStorage.getItem("pets_level")) || 1;
@@ -258,109 +187,91 @@ const player = {
 const gravity = 0.48;
 const friction = 0.80;
 
-function generateLevel(lvl) {
-    let difficulty = Math.min(lvl / 25, 5); 
-    let seed = lvl * 1543;
-    function randomSeed() {
-        let x = Math.sin(seed++) * 10000;
-        return x - Math.floor(x);
+// CANVAS İÇİ BUTONLAR
+const canvasButtons = {
+    left: { x: 55, y: 325, r: 35, active: false, label: "◀" },
+    right: { x: 145, y: 325, r: 35, active: false, label: "▶" },
+    jump: { x: 735, y: 315, r: 40, active: false, label: "▲" }
+};
+
+// YENİLENMİŞ GÜVENLİ DOKUNMATİK ALGILAMA SİSTEMİ (Takılı kalmayı önler)
+function handleTouch(e) {
+    e.preventDefault(); 
+    const rect = canvas.getBoundingClientRect();
+    
+    // Her dokunma hareketinde durumları sıfırlayıp güncel parmak pozisyonuna göre eşliyoruz
+    keys.left = false;
+    keys.right = false;
+    keys.jump = false;
+    canvasButtons.left.active = false;
+    canvasButtons.right.active = false;
+    canvasButtons.jump.active = false;
+
+    // Eğer ekranda aktif parmak varsa kontrolleri oku
+    if (e.touches.length > 0) {
+        for (let i = 0; i < e.touches.length; i++) {
+            let touch = e.touches[i];
+            
+            let touchX = ((touch.clientX - rect.left) / rect.width) * canvas.width;
+            let touchY = ((touch.clientY - rect.top) / rect.height) * canvas.height;
+
+            for (let key in canvasButtons) {
+                let btn = canvasButtons[key];
+                let dist = Math.hypot(touchX - btn.x, touchY - btn.y);
+                if (dist < btn.r + 10) { 
+                    keys[key] = true;
+                    btn.active = true;
+                }
+            }
+        }
     }
-
-    let levelData = {
-        platforms: [{ x: 0, y: 340, width: 140, height: 60, type: 'normal' }],
-        dotPiece: { x: 350, y: 180, width: 24, height: 24 },
-        portal: { x: 745, y: 280, width: 45, height: 60 },
-        hazards: []
-    };
-
-    let currentX = 160;
-    let currentY = 240 + Math.floor(randomSeed() * 60);
-
-    for (let i = 0; i < 4; i++) {
-        let pWidth = Math.max(125 - (difficulty * 12) - Math.floor(randomSeed() * 25), 50);
-        let stepGap = 115 + (difficulty * 10) + Math.floor(randomSeed() * 30);
-        
-        let pType = 'normal';
-        let rType = randomSeed();
-        if (lvl > 4 && rType > 0.65) pType = 'crumbling';
-        if (lvl > 10 && rType <= 0.35) pType = 'moving';
-        if (lvl > 25 && rType > 0.35 && rType <= 0.65) pType = 'crumbling';
-
-        levelData.platforms.push({ 
-            x: currentX, 
-            y: currentY, 
-            width: pWidth, 
-            height: 15, 
-            type: pType,
-            startY: currentY,
-            startX: currentX,
-            range: 35 + (difficulty * 12) + Math.floor(randomSeed() * 20),
-            speed: 0.015 + (difficulty * 0.008) + (randomSeed() * 0.01),
-            angle: randomSeed() * Math.PI * 2,
-            moveDir: randomSeed() > 0.5 ? 'vertical' : 'horizontal',
-            stepped: false,
-            stepTime: 0,
-            broken: false
-        });
-
-        if (lvl > 3 && randomSeed() > 0.3) {
-            levelData.hazards.push({ 
-                x: currentX + 10, 
-                y: currentY - 26, 
-                width: 26, 
-                height: 26, 
-                type: 'cat',
-                platIndex: levelData.platforms.length - 1,
-                dir: randomSeed() > 0.5 ? 1 : -1,
-                speed: 1.1 + (difficulty * 0.35) + (randomSeed() * 0.5),
-                velY: 0,
-                isGrounded: true,
-                jumpTimer: 40 + Math.floor(randomSeed() * 100)
-            });
-        }
-        
-        if (lvl > 15 && randomSeed() > 0.7 && pType !== 'crumbling') {
-            levelData.hazards.push({ 
-                x: currentX + Math.floor(randomSeed() * (pWidth - 20)), 
-                y: currentY - 40 - Math.floor(randomSeed() * 30), 
-                width: 22, 
-                height: 22, 
-                type: 'darkness' 
-            });
-        }
-
-        if (i === Math.floor(randomSeed() * 3) + 1 || i === 2) {
-            levelData.dotPiece.x = currentX + (pWidth / 2) - 12;
-            levelData.dotPiece.y = currentY - 35 - Math.floor(randomSeed() * 20);
-        }
-
-        currentX += stepGap;
-        currentY += Math.floor(randomSeed() * 90) - 45;
-        currentY = Math.max(140, Math.min(currentY, 310));
-    }
-
-    levelData.platforms.push({ x: 730, y: 340, width: 70, height: 60, type: 'normal' });
-    return levelData;
 }
 
-let activeLevel = generateLevel(currentLevel);
-document.getElementById("levelText").innerText = currentLevel;
-
-const changeBtn = document.getElementById("changeCharBtn");
-changeBtn.innerText = characterList[activeCharIndex].name;
-changeBtn.style.backgroundColor = characterList[activeCharIndex].color;
-
-setupButton("leftBtn", "left");
-setupButton("rightBtn", "right");
-setupButton("jumpBtn", "jump");
-
-function setupButton(id, key) {
-    const btn = document.getElementById(id);
-    btn.addEventListener("touchstart", (e) => { e.preventDefault(); keys[key] = true; });
-    btn.addEventListener("touchend", (e) => { e.preventDefault(); keys[key] = false; });
-    btn.addEventListener("mousedown", () => keys[key] = true);
-    btn.addEventListener("mouseup", () => keys[key] = false);
+// Parmağı ekrandan tamamen kaldırdığında veya iptal olduğunda tetiklenen net sıfırlama
+function clearTouch(e) {
+    e.preventDefault();
+    if (e.touches.length === 0) {
+        keys.left = false;
+        keys.right = false;
+        keys.jump = false;
+        canvasButtons.left.active = false;
+        canvasButtons.right.active = false;
+        canvasButtons.jump.active = false;
+    } else {
+        // Eğer hâlâ basılı başka parmak varsa durumu yeniden hesapla
+        handleTouch(e);
+    }
 }
+
+// Event Listener bağlantıları
+canvas.addEventListener("touchstart", handleTouch, { passive: false });
+canvas.addEventListener("touchmove", handleTouch, { passive: false });
+canvas.addEventListener("touchend", clearTouch, { passive: false });
+canvas.addEventListener("touchcancel", clearTouch, { passive: false });
+
+// FARE (MOUSE) KONTROLLERİ - TAKILMAYI ÖNLER
+function handleMouse(e, isDown) {
+    const rect = canvas.getBoundingClientRect();
+    let mouseX = ((e.clientX - rect.left) / rect.width) * canvas.width;
+    let mouseY = ((e.clientY - rect.top) / rect.height) * canvas.height;
+
+    keys.left = false; keys.right = false; keys.jump = false;
+    canvasButtons.left.active = false; canvasButtons.right.active = false; canvasButtons.jump.active = false;
+
+    if (!isDown) return;
+
+    for (let key in canvasButtons) {
+        let btn = canvasButtons[key];
+        let dist = Math.hypot(mouseX - btn.x, mouseY - btn.y);
+        if (dist < btn.r) {
+            keys[key] = true;
+            btn.active = true;
+        }
+    }
+}
+canvas.addEventListener("mousedown", (e) => handleMouse(e, true));
+canvas.addEventListener("mouseup", (e) => handleMouse(e, false));
+canvas.addEventListener("mouseleave", (e) => handleMouse(e, false));
 
 changeBtn.addEventListener("click", () => {
     activeCharIndex++;
@@ -639,6 +550,33 @@ function draw() {
         ctx.font = "bold 11px Arial";
         ctx.fillText(curChar.letter, player.x + (player.w/2) - 5, player.y + 21);
     }
+
+    // CANVAS BUTONLARININ ÇİZİMİ
+    for (let key in canvasButtons) {
+        let btn = canvasButtons[key];
+        
+        ctx.save();
+        if (key === "jump") {
+            ctx.fillStyle = btn.active ? "#c0392b" : "#e74c3c";
+        } else {
+            ctx.fillStyle = btn.active ? "#34495e" : "#2c3e50";
+        }
+        
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 3;
+        
+        ctx.beginPath();
+        ctx.arc(btn.x, btn.y, btn.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        
+        ctx.fillStyle = "#ffffff";
+        ctx.font = `bold ${key === 'jump' ? '32px' : '26px'} Arial`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(btn.label, btn.x, btn.y + (key === 'jump' ? -2 : 1));
+        ctx.restore();
+    }
 }
 
 function gameLoop() {
@@ -651,4 +589,4 @@ gameLoop();
 </script>
 
 </body>
-    </html>
+</html>
