@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>The Pets: Hardcore Arena V2</title>
+    <title>The Pets: Hardcore Arena V3</title>
     <style>
         * {
             box-sizing: border-box;
@@ -37,7 +37,7 @@
             box-shadow: 0 0 20px rgba(0,0,0,0.8);
             z-index: 1;
         }
-        
+
         /* GELİŞMİŞ HUD ARAYÜZÜ */
         #hud {
             position: absolute;
@@ -58,20 +58,25 @@
             gap: 5px;
             pointer-events: auto;
         }
-        
+
         .hud-item {
             display: flex;
             align-items: center;
             gap: 4px;
         }
-        
+
         #timeBadge {
             color: #ff4757;
             background: rgba(255, 71, 87, 0.25);
             padding: 1px 6px;
             border-radius: 4px;
+            transition: all 0.2s;
         }
         
+        .time-bonus {
+            animation: flashGreen 0.5s ease-out;
+        }
+
         #changeCharBtn {
             background: #2ed573;
             color: white;
@@ -82,12 +87,12 @@
             font-size: 11px;
             cursor: pointer;
         }
-        
+
         #changeCharBtn.active {
             animation: pulse 0.5s infinite alternate;
             background: #ffa500 !important;
         }
-        
+
         #resetGameBtn {
             background: #7f8c8d;
             color: white;
@@ -99,10 +104,14 @@
             cursor: pointer;
         }
         #resetGameBtn:active { background: #c0392b; }
-        
+
         @keyframes pulse {
             from { transform: scale(1); }
             to { transform: scale(1.06); }
+        }
+        @keyframes flashGreen {
+            0% { background: rgba(46, 213, 115, 0.8); color: #fff; transform: scale(1.2); }
+            100% { background: rgba(255, 71, 87, 0.25); color: #ff4757; transform: scale(1); }
         }
     </style>
 </head>
@@ -110,7 +119,7 @@
 
 <div id="gameContainer">
     <canvas id="gameCanvas" width="800" height="400"></canvas>
-    
+
     <div id="hud">
         <div class="hud-item">Svy: <span id="levelText">1</span>/150</div>
         <div class="hud-item">Süre: <span id="timeBadge"><span id="timerText">25</span>s</span></div>
@@ -141,13 +150,15 @@ window.addEventListener("resize", resizeGame);
 window.addEventListener("orientationchange", resizeGame);
 resizeGame();
 
+// GÜNCELLEME: Karakter listesine Blook eklendi!
 const characterList = [
     { name: "yeyet", color: "#f39c12", letter: "Y" },
-    { name: "Squeak", color: "#3498db", letter: "S" },
+    { name: "Squeak", color: "#3498db", letter: "S" }, // Özel mekanik: Sakar Squeak Hızı!
     { name: "Moosey", color: "#9b59b6", letter: "M" },
     { name: "Sugar", color: "#e74c3c", letter: "Su" },
     { name: "Dot", color: "#d35400", letter: "D" },
-    { name: "Blinky", color: "#7f8c8d", letter: "B" }
+    { name: "Blinky", color: "#7f8c8d", letter: "B" },
+    { name: "Blook", color: "#6d4c41", letter: "Bl" }
 ];
 
 let currentLevel = parseInt(localStorage.getItem("pets_level")) || 1;
@@ -172,6 +183,11 @@ let keys = { left: false, right: false, jump: false };
 let levelTimer = 25; 
 let lastTimeUpdate = Date.now();
 
+// Görsel Efektler İçin Yeni Değişkenler
+let particles = [];
+let flashRedFrames = 0;
+let portalPulseAngle = 0;
+
 const player = {
     x: 60,
     y: 200,
@@ -185,7 +201,7 @@ const player = {
 };
 
 const gravity = 0.48;
-const friction = 0.80;
+let friction = 0.80;
 
 // CANVAS İÇİ BUTONLARIN TANIMLANMASI (Hassas Konumlandırma)
 const canvasButtons = {
@@ -194,12 +210,11 @@ const canvasButtons = {
     jump: { x: 735, y: 315, r: 40, active: false, label: "▲" }
 };
 
-// GÜVENLİ DOKUNMATİK ALGILAMA SİSTEMİ (Her harekette parmakları baştan kontrol eder)
+// GÜVENLİ DOKUNMATİK ALGILAMA SİSTEMİ
 function handleTouch(e) {
     e.preventDefault();
     const rect = canvas.getBoundingClientRect();
-    
-    // Önce tüm butonların basılma durumlarını sıfırla
+
     keys.left = false;
     keys.right = false;
     keys.jump = false;
@@ -207,11 +222,10 @@ function handleTouch(e) {
     canvasButtons.right.active = false;
     canvasButtons.jump.active = false;
 
-    // Ekranda o an duran tüm aktif parmakları tarayıp buton durumlarını eşle
     if (e.touches.length > 0) {
         for (let i = 0; i < e.touches.length; i++) {
             let touch = e.touches[i];
-            
+
             let touchX = ((touch.clientX - rect.left) / rect.width) * canvas.width;
             let touchY = ((touch.clientY - rect.top) / rect.height) * canvas.height;
 
@@ -227,11 +241,9 @@ function handleTouch(e) {
     }
 }
 
-// Parmağını ekrandan çektiğinde tuşun takılı kalmasını önleyen sıfırlama fonksiyonu
 function clearTouch(e) {
     e.preventDefault();
     if (e.touches.length === 0) {
-        // Ekranda hiç parmak kalmadıysa her şeyi durdur
         keys.left = false;
         keys.right = false;
         keys.jump = false;
@@ -239,18 +251,15 @@ function clearTouch(e) {
         canvasButtons.right.active = false;
         canvasButtons.jump.active = false;
     } else {
-        // Ekranda hâlâ basılı tutulan başka bir parmak varsa pozisyonları güncelle
         handleTouch(e);
     }
 }
 
-// Dokunmatik Ekran Event Listenerları
 canvas.addEventListener("touchstart", handleTouch, { passive: false });
 canvas.addEventListener("touchmove", handleTouch, { passive: false });
 canvas.addEventListener("touchend", clearTouch, { passive: false });
 canvas.addEventListener("touchcancel", clearTouch, { passive: false });
 
-// FARE (MOUSE) DESTEĞİ VE GÜVENLİĞİ
 function handleMouse(e, isDown) {
     const rect = canvas.getBoundingClientRect();
     let mouseX = ((e.clientX - rect.left) / rect.width) * canvas.width;
@@ -274,6 +283,21 @@ canvas.addEventListener("mousedown", (e) => handleMouse(e, true));
 canvas.addEventListener("mouseup", (e) => handleMouse(e, false));
 canvas.addEventListener("mouseleave", (e) => handleMouse(e, false));
 
+// Partikül Oluşturma Fonksiyonu
+function createParticles(x, y, color, count = 5) {
+    for (let i = 0; i < count; i++) {
+        particles.push({
+            x: x,
+            y: y,
+            vx: (Math.random() - 0.5) * 3,
+            vy: (Math.random() - 0.5) * 3,
+            size: Math.random() * 4 + 2,
+            alpha: 1,
+            color: color
+        });
+    }
+}
+
 function generateLevel(lvl) {
     let difficulty = Math.min(lvl / 25, 5); 
     let seed = lvl * 1543;
@@ -286,7 +310,8 @@ function generateLevel(lvl) {
         platforms: [{ x: 0, y: 340, width: 140, height: 60, type: 'normal' }],
         dotPiece: { x: 350, y: 180, width: 24, height: 24 },
         portal: { x: 745, y: 280, width: 45, height: 60 },
-        hazards: []
+        hazards: [],
+        chocolates: [] // GÜNCELLEME: Süre kazandıran çikolatalar dizisi
     };
 
     let currentX = 160;
@@ -295,7 +320,7 @@ function generateLevel(lvl) {
     for (let i = 0; i < 4; i++) {
         let pWidth = Math.max(125 - (difficulty * 12) - Math.floor(randomSeed() * 25), 50);
         let stepGap = 115 + (difficulty * 10) + Math.floor(randomSeed() * 30);
-        
+
         let pType = 'normal';
         let rType = randomSeed();
         if (lvl > 4 && rType > 0.65) pType = 'crumbling';
@@ -319,6 +344,17 @@ function generateLevel(lvl) {
             broken: false
         });
 
+        // GÜNCELLEME: Platformların üzerine bazen süre veren Altın Çikolatalar yerleştir
+        if (randomSeed() > 0.5) {
+            levelData.chocolates.push({
+                x: currentX + (pWidth / 2) - 8,
+                y: currentY - 25,
+                width: 16,
+                height: 16,
+                collected: false
+            });
+        }
+
         if (lvl > 3 && randomSeed() > 0.3) {
             levelData.hazards.push({ 
                 x: currentX + 10, 
@@ -334,7 +370,7 @@ function generateLevel(lvl) {
                 jumpTimer: 40 + Math.floor(randomSeed() * 100)
             });
         }
-        
+
         if (lvl > 15 && randomSeed() > 0.7 && pType !== 'crumbling') {
             levelData.hazards.push({ 
                 x: currentX + Math.floor(randomSeed() * (pWidth - 20)), 
@@ -418,11 +454,22 @@ function update() {
         levelTimer--;
         document.getElementById("timerText").innerText = levelTimer;
         lastTimeUpdate = now;
-        
+
         if (levelTimer <= 0) {
+            triggerDamageEffect();
             resetPosition(true); 
             return;
         }
+    }
+
+    // GÜNCELLEME: Squeak Karakterine Özel Yetenek/Mekanik Entegrasyonu
+    let curCharName = characterList[activeCharIndex].name;
+    if (curCharName === "Squeak") {
+        player.speed = 5.3; // %20 Daha Hızlı Koşar
+        friction = 0.92;    // Jöle gibi kayar, durması daha zordur!
+    } else {
+        player.speed = 4.4;
+        friction = 0.80;
     }
 
     if (keys.left) { if (player.velX > -player.speed) player.velX -= 0.85; }
@@ -431,6 +478,8 @@ function update() {
         player.jumping = true;
         player.grounded = false;
         player.velY = -11.2;
+        // Zıplama Efekti (Toz partikülleri)
+        createParticles(player.x + player.w/2, player.y + player.h, '#ffffff', 6);
     }
 
     player.velX *= friction;
@@ -452,12 +501,13 @@ function update() {
         if (p.type === 'crumbling' && p.stepped) {
             if (Date.now() - p.stepTime > 1000) {
                 p.broken = true; 
+                createParticles(p.x + p.width/2, p.y + p.height/2, '#e67e22', 8);
             }
         }
 
         if (player.x + player.w > p.x && player.x < p.x + p.width &&
             player.y + player.h <= p.y + 10 && player.y + player.h + player.velY >= p.y) {
-            
+
             player.grounded = true;
             player.jumping = false;
             player.velY = 0;
@@ -479,8 +529,28 @@ function update() {
 
     if (player.x < 0) player.x = 0;
     if (player.x > canvas.width - player.w) player.x = canvas.width - player.w;
-    
-    if (player.y > canvas.height) resetPosition(true);
+
+    if (player.y > canvas.height) {
+        triggerDamageEffect();
+        resetPosition(true);
+    }
+
+    // GÜNCELLEME: Çikolata toplama mekaniği kontrolü (+3sn bonus)
+    activeLevel.chocolates.forEach(choc => {
+        if (!choc.collected && checkCollision(player, choc)) {
+            choc.collected = true;
+            levelTimer += 3;
+            document.getElementById("timerText").innerText = levelTimer;
+            
+            // HUD Animasyonu tetikle
+            let badge = document.getElementById("timeBadge");
+            badge.classList.remove("time-bonus");
+            void badge.offsetWidth; // DOM tetikleyici sıfırlama
+            badge.classList.add("time-bonus");
+            
+            createParticles(choc.x + 8, choc.y + 8, '#f1c40f', 10);
+        }
+    });
 
     activeLevel.hazards.forEach(h => {
         if (h.type === 'cat') {
@@ -520,6 +590,7 @@ function update() {
         }
 
         if (checkCollision(player, h) && (!platOrHazardBroken(h))) {
+            triggerDamageEffect();
             resetPosition(true); 
         }
     });
@@ -532,12 +603,13 @@ function update() {
     if (!levelPieceCollected && checkCollision(player, activeLevel.dotPiece)) {
         levelPieceCollected = true;
         document.getElementById("piecesText").innerText = "1 / 1";
+        createParticles(activeLevel.dotPiece.x + 12, activeLevel.dotPiece.y + 12, '#00ffff', 15);
     }
 
     if (levelPieceCollected && checkCollision(player, activeLevel.portal)) {
         currentLevel++;
         saveProgress(); 
-        
+
         if (currentLevel <= 150) {
             activeLevel = generateLevel(currentLevel);
             levelPieceCollected = false;
@@ -545,6 +617,7 @@ function update() {
             document.getElementById("piecesText").innerText = "0 / 1";
             canvas.style.background = `hsl(${(currentLevel * 55) % 360}, 30%, 22%)`;
 
+            // GÜNCELLEME: Karakter açma baremi 7 karaktere göre uyarlandı
             if (currentLevel % 5 === 1 && currentLevel > 1) {
                 let nextTargetIndex = Math.floor((currentLevel - 1) / 5);
                 if (nextTargetIndex < characterList.length) {
@@ -562,6 +635,24 @@ function update() {
             saveProgress();
         }
     }
+
+    // Partikülleri güncelle
+    for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha -= 0.025;
+        if (p.alpha <= 0) {
+            particles.splice(i, 1);
+        }
+    }
+
+    // Portal dalga açısını büyüt
+    portalPulseAngle += 0.05;
+}
+
+function triggerDamageEffect() {
+    flashRedFrames = 12; // 12 kare boyunca ekran kırmızı parlayacak
 }
 
 function resetPosition(resetTime) {
@@ -569,26 +660,32 @@ function resetPosition(resetTime) {
     player.y = 200;
     player.velX = 0;
     player.velY = 0;
-    
+
     levelPieceCollected = false;
     document.getElementById("piecesText").innerText = "0 / 1";
-    
+
     if (resetTime) {
         levelTimer = 25; 
         document.getElementById("timerText").innerText = levelTimer;
     }
-    
+
     activeLevel.platforms.forEach(p => {
         if (p.type === 'crumbling') {
             p.stepped = false;
             p.broken = false;
         }
     });
+    
+    // Çikolataları da sıfırla
+    if(activeLevel.chocolates) {
+        activeLevel.chocolates.forEach(choc => choc.collected = false);
+    }
 }
 
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // Platformları Çiz
     activeLevel.platforms.forEach(p => {
         if (p.broken) return;
 
@@ -605,6 +702,19 @@ function draw() {
         ctx.fillRect(p.x, p.y, p.width, p.height);
     });
 
+    // GÜNCELLEME: Altın Çikolataları Çiz (Süre Veren Ögeler)
+    if (activeLevel.chocolates) {
+        activeLevel.chocolates.forEach(choc => {
+            if (choc.collected) return;
+            ctx.fillStyle = "#f1c40f"; // Altın Çikolata Sarısı
+            ctx.fillRect(choc.x, choc.y, choc.width, choc.height);
+            // Çikolata dokusu için küçük bir çizgi
+            ctx.fillStyle = "#d35400";
+            ctx.fillRect(choc.x + 4, choc.y + 4, 8, 8);
+        });
+    }
+
+    // Engelleri Çiz
     activeLevel.hazards.forEach(h => {
         if (h.platIndex !== undefined && activeLevel.platforms[h.platIndex].broken) return;
 
@@ -619,6 +729,7 @@ function draw() {
         }
     });
 
+    // Dot Parçasını Çiz
     if (!levelPieceCollected) {
         if (images.Dot.complete && images.Dot.naturalWidth !== 0) {
             ctx.drawImage(images.Dot, activeLevel.dotPiece.x, activeLevel.dotPiece.y, activeLevel.dotPiece.width, activeLevel.dotPiece.height);
@@ -630,9 +741,15 @@ function draw() {
         }
     }
 
+    // GÜNCELLEME: Portala Dönüş Haresi Efekti Eklendi
+    let portalPulse = Math.sin(portalPulseAngle) * 6;
+    ctx.fillStyle = levelPieceCollected ? "rgba(155, 89, 182, 0.4)" : "rgba(127, 140, 141, 0.2)";
+    ctx.fillRect(activeLevel.portal.x - portalPulse/2, activeLevel.portal.y - portalPulse/2, activeLevel.portal.width + portalPulse, activeLevel.portal.height + portalPulse);
+
     ctx.fillStyle = levelPieceCollected ? "#9b59b6" : "#7f8c8d";
     ctx.fillRect(activeLevel.portal.x, activeLevel.portal.y, activeLevel.portal.width, activeLevel.portal.height);
 
+    // Aktif Karakteri Çiz
     let curChar = characterList[activeCharIndex];
     if (images[curChar.name] && images[curChar.name].complete && images[curChar.name].naturalWidth !== 0) {
         ctx.drawImage(images[curChar.name], player.x, player.y, player.w, player.h);
@@ -641,28 +758,44 @@ function draw() {
         ctx.fillRect(player.x, player.y, player.w, player.h);
         ctx.fillStyle = "#fff";
         ctx.font = "bold 11px Arial";
-        ctx.fillText(curChar.letter, player.x + (player.w/2) - 5, player.y + 21);
+        ctx.fillText(curChar.letter, player.x + (player.w/2) - (curChar.letter.length * 3.5), player.y + 21);
+    }
+
+    // Partikülleri Çiz
+    particles.forEach(p => {
+        ctx.save();
+        ctx.globalAlpha = p.alpha;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, p.size, p.size);
+        ctx.restore();
+    });
+
+    // GÜNCELLEME: Hasar/Yarın Kalma Durumunda Ekranı Kırmızı Flaşa Boya
+    if (flashRedFrames > 0) {
+        ctx.fillStyle = `rgba(255, 0, 0, ${flashRedFrames / 30})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        flashRedFrames--;
     }
 
     // CANVAS BUTONLARININ ÇİZİMİ
     for (let key in canvasButtons) {
         let btn = canvasButtons[key];
-        
+
         ctx.save();
         if (key === "jump") {
             ctx.fillStyle = btn.active ? "#c0392b" : "#e74c3c";
         } else {
             ctx.fillStyle = btn.active ? "#34495e" : "#2c3e50";
         }
-        
+
         ctx.strokeStyle = "#ffffff";
         ctx.lineWidth = 3;
-        
+
         ctx.beginPath();
         ctx.arc(btn.x, btn.y, btn.r, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
-        
+
         ctx.fillStyle = "#ffffff";
         ctx.font = `bold ${key === 'jump' ? '32px' : '26px'} Arial`;
         ctx.textAlign = "center";
@@ -682,4 +815,4 @@ gameLoop();
 </script>
 
 </body>
-    </html>
+</html>
