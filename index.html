@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>The Pets: Hardcore Arena V3</title>
+    <title>The Pets: Hardcore Arena V3 - TV Edition</title>
     <style>
         * {
             box-sizing: border-box;
@@ -13,14 +13,15 @@
             padding: 0;
         }
         body {
-            background-color: #0d0d11;
-            font-family: Arial, sans-serif;
+            background-color: #022c22;
+            font-family: 'Courier New', Courier, monospace;
             overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
             height: 100vh;
             width: 100vw;
+            color: #34d399;
         }
         #gameContainer {
             position: relative;
@@ -29,16 +30,15 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            background: #111a24;
+            background: #01140f;
         }
         canvas {
-            background: #14354f;
+            background: #01140f;
             display: block;
-            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            border: 2px solid #10b981;
+            box-shadow: 0 0 30px rgba(0, 255, 100, 0.15);
             z-index: 1;
         }
-
-        /* GELİŞMİŞ HUD ARAYÜZÜ */
         #hud {
             position: absolute;
             top: 10px;
@@ -47,71 +47,26 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            color: white;
+            color: #34d399;
             font-size: 11px;
             font-weight: bold;
-            text-shadow: 2px 2px 3px #000;
-            background: rgba(0,0,0,0.85);
+            text-shadow: 0 0 5px rgba(0,0,0,0.9);
+            background: rgba(2, 44, 34, 0.9);
             padding: 8px 12px;
-            border-radius: 6px;
+            border: 1px solid #10b981;
             z-index: 1000;
-            gap: 5px;
-            pointer-events: auto;
         }
-
-        .hud-item {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
         #timeBadge {
-            color: #ff4757;
-            background: rgba(255, 71, 87, 0.25);
+            color: #f59e0b;
+            background: rgba(245, 158, 11, 0.15);
             padding: 1px 6px;
-            border-radius: 4px;
-            transition: all 0.2s;
+            border: 1px dashed #f59e0b;
         }
-        
-        .time-bonus {
-            animation: flashGreen 0.5s ease-out;
-        }
-
-        #changeCharBtn {
-            background: #2ed573;
-            color: white;
-            border: 1px solid #fff;
+        #charDisplay {
+            background: #10b981;
+            color: #022c22;
             padding: 2px 7px;
-            border-radius: 8px;
             font-weight: bold;
-            font-size: 11px;
-            cursor: pointer;
-        }
-
-        #changeCharBtn.active {
-            animation: pulse 0.5s infinite alternate;
-            background: #ffa500 !important;
-        }
-
-        #resetGameBtn {
-            background: #7f8c8d;
-            color: white;
-            border: none;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-weight: bold;
-            font-size: 10px;
-            cursor: pointer;
-        }
-        #resetGameBtn:active { background: #c0392b; }
-
-        @keyframes pulse {
-            from { transform: scale(1); }
-            to { transform: scale(1.06); }
-        }
-        @keyframes flashGreen {
-            0% { background: rgba(46, 213, 115, 0.8); color: #fff; transform: scale(1.2); }
-            100% { background: rgba(255, 71, 87, 0.25); color: #ff4757; transform: scale(1); }
         }
     </style>
 </head>
@@ -121,11 +76,10 @@
     <canvas id="gameCanvas" width="800" height="400"></canvas>
 
     <div id="hud">
-        <div class="hud-item">Svy: <span id="levelText">1</span>/150</div>
-        <div class="hud-item">Süre: <span id="timeBadge"><span id="timerText">25</span>s</span></div>
-        <div class="hud-item">Krk: <button id="changeCharBtn">Yeyet</button></div>
-        <div class="hud-item">Parça: <span id="piecesText">0/1</span></div>
-        <button id="resetGameBtn" title="Oyunu Sıfırla">Sıfırla ❌</button>
+        <div>SVY: <span id="levelText">1</span>/150</div>
+        <div>SÜRE: <span id="timeBadge"><span id="timerText">25</span>s</span></div>
+        <div>PET: <span id="charDisplay">Moosey</span></div>
+        <div>PARÇA: <span id="piecesText">0/1</span></div>
     </div>
 </div>
 
@@ -137,7 +91,6 @@ function resizeGame() {
     const containerWidth = window.innerWidth;
     const containerHeight = window.innerHeight;
     const gameRatio = 800 / 400;
-
     if (containerWidth / containerHeight > gameRatio) {
         canvas.style.width = (containerHeight * gameRatio) + "px";
         canvas.style.height = containerHeight + "px";
@@ -147,19 +100,29 @@ function resizeGame() {
     }
 }
 window.addEventListener("resize", resizeGame);
-window.addEventListener("orientationchange", resizeGame);
 resizeGame();
 
-// GÜNCELLEME: Karakter listesine Blook eklendi!
+// 9 KARAKTER VE HARDCORE İSTATİSTİKLERİ
 const characterList = [
-    { name: "yeyet", color: "#f39c12", letter: "Y" },
-    { name: "Squeak", color: "#3498db", letter: "S" }, // Özel mekanik: Sakar Squeak Hızı!
-    { name: "Moosey", color: "#9b59b6", letter: "M" },
-    { name: "Sugar", color: "#e74c3c", letter: "Su" },
-    { name: "Dot", color: "#d35400", letter: "D" },
-    { name: "Blinky", color: "#7f8c8d", letter: "B" },
-    { name: "Blook", color: "#6d4c41", letter: "Bl" }
+    { name: "Moosey", color: "#10b981", letter: "M", speed: 4.4, jump: -11.2 },
+    { name: "Sugar", color: "#f43f5e", letter: "Su", speed: 4.2, jump: -12.2 },
+    { name: "Squeak", color: "#38bdf8", letter: "Sq", speed: 5.3, jump: -11.0 },
+    { name: "Gus", color: "#eab308", letter: "G", speed: 3.9, jump: -11.4 },
+    { name: "Dot", color: "#a855f7", letter: "D", speed: 4.8, jump: -10.8 },
+    { name: "Flip", color: "#f97316", letter: "Fl", speed: 4.5, jump: -11.3 },
+    { name: "Yeyet", color: "#ec4899", letter: "Y", speed: 4.3, jump: -11.0 },
+    { name: "Blook", color: "#8b5cf6", letter: "Bl", speed: 4.6, jump: -11.1 },
+    { name: "Blinky", color: "#14b8a6", letter: "B", speed: 4.2, jump: -11.5 }
 ];
+
+// GÖRSEL RESİM DOSYALARININ TANIMLANMASI VE YÜKLENMESİ
+const images = {};
+characterList.forEach(char => {
+    images[char.name] = new Image();
+    images[char.name].src = `${char.name}.jpg`;
+});
+images.Dot = new Image();
+images.Dot.src = 'Dot.jpg'; // Toplanacak parça resmi
 
 let currentLevel = parseInt(localStorage.getItem("pets_level")) || 1;
 let unlockedCharIndex = parseInt(localStorage.getItem("pets_unlocked")) || 0;
@@ -170,134 +133,35 @@ function saveProgress() {
     localStorage.setItem("pets_unlocked", unlockedCharIndex);
 }
 
-const images = {};
-characterList.forEach(char => {
-    images[char.name] = new Image();
-    images[char.name].src = `${char.name}.jpg`;
-});
-images.Dot = new Image();
-images.Dot.src = 'Dot.jpg';
-
 let levelPieceCollected = false;
 let keys = { left: false, right: false, jump: false };
 let levelTimer = 25; 
 let lastTimeUpdate = Date.now();
-
-// Görsel Efektler İçin Yeni Değişkenler
 let particles = [];
 let flashRedFrames = 0;
 let portalPulseAngle = 0;
 
 const player = {
-    x: 60,
-    y: 200,
-    w: 34,
-    h: 34,
-    velX: 0,
-    velY: 0,
-    jumping: false,
-    grounded: false,
-    speed: 4.4
+    x: 60, y: 200, w: 32, h: 32,
+    velX: 0, velY: 0,
+    jumping: false, grounded: false,
+    speed: 4.4, canDash: true, dashActive: false, dashTimer: 0
 };
 
-const gravity = 0.48;
+const gravity = 0.52;
 let friction = 0.80;
 
-// CANVAS İÇİ BUTONLARIN TANIMLANMASI (Hassas Konumlandırma)
-const canvasButtons = {
-    left: { x: 55, y: 325, r: 35, active: false, label: "◀" },
-    right: { x: 145, y: 325, r: 35, active: false, label: "▶" },
-    jump: { x: 735, y: 315, r: 40, active: false, label: "▲" }
-};
-
-// GÜVENLİ DOKUNMATİK ALGILAMA SİSTEMİ
-function handleTouch(e) {
-    e.preventDefault();
-    const rect = canvas.getBoundingClientRect();
-
-    keys.left = false;
-    keys.right = false;
-    keys.jump = false;
-    canvasButtons.left.active = false;
-    canvasButtons.right.active = false;
-    canvasButtons.jump.active = false;
-
-    if (e.touches.length > 0) {
-        for (let i = 0; i < e.touches.length; i++) {
-            let touch = e.touches[i];
-
-            let touchX = ((touch.clientX - rect.left) / rect.width) * canvas.width;
-            let touchY = ((touch.clientY - rect.top) / rect.height) * canvas.height;
-
-            for (let key in canvasButtons) {
-                let btn = canvasButtons[key];
-                let dist = Math.hypot(touchX - btn.x, touchY - btn.y);
-                if (dist < btn.r + 12) { 
-                    keys[key] = true;
-                    btn.active = true;
-                }
-            }
-        }
-    }
-}
-
-function clearTouch(e) {
-    e.preventDefault();
-    if (e.touches.length === 0) {
-        keys.left = false;
-        keys.right = false;
-        keys.jump = false;
-        canvasButtons.left.active = false;
-        canvasButtons.right.active = false;
-        canvasButtons.jump.active = false;
-    } else {
-        handleTouch(e);
-    }
-}
-
-canvas.addEventListener("touchstart", handleTouch, { passive: false });
-canvas.addEventListener("touchmove", handleTouch, { passive: false });
-canvas.addEventListener("touchend", clearTouch, { passive: false });
-canvas.addEventListener("touchcancel", clearTouch, { passive: false });
-
-function handleMouse(e, isDown) {
-    const rect = canvas.getBoundingClientRect();
-    let mouseX = ((e.clientX - rect.left) / rect.width) * canvas.width;
-    let mouseY = ((e.clientY - rect.top) / rect.height) * canvas.height;
-
-    keys.left = false; keys.right = false; keys.jump = false;
-    canvasButtons.left.active = false; canvasButtons.right.active = false; canvasButtons.jump.active = false;
-
-    if (!isDown) return;
-
-    for (let key in canvasButtons) {
-        let btn = canvasButtons[key];
-        let dist = Math.hypot(mouseX - btn.x, mouseY - btn.y);
-        if (dist < btn.r) {
-            keys[key] = true;
-            btn.active = true;
-        }
-    }
-}
-canvas.addEventListener("mousedown", (e) => handleMouse(e, true));
-canvas.addEventListener("mouseup", (e) => handleMouse(e, false));
-canvas.addEventListener("mouseleave", (e) => handleMouse(e, false));
-
-// Partikül Oluşturma Fonksiyonu
 function createParticles(x, y, color, count = 5) {
     for (let i = 0; i < count; i++) {
         particles.push({
-            x: x,
-            y: y,
-            vx: (Math.random() - 0.5) * 3,
-            vy: (Math.random() - 0.5) * 3,
-            size: Math.random() * 4 + 2,
-            alpha: 1,
-            color: color
+            x: x, y: y,
+            vx: (Math.random() - 0.5) * 3, vy: (Math.random() - 0.5) * 3,
+            size: Math.random() * 4 + 2, alpha: 1, color: color
         });
     }
 }
 
+// 150 LEVEL GENERATOR (Sadece platform, duvar, süre ve çikolata odaklı)
 function generateLevel(lvl) {
     let difficulty = Math.min(lvl / 25, 5); 
     let seed = lvl * 1543;
@@ -310,80 +174,38 @@ function generateLevel(lvl) {
         platforms: [{ x: 0, y: 340, width: 140, height: 60, type: 'normal' }],
         dotPiece: { x: 350, y: 180, width: 24, height: 24 },
         portal: { x: 745, y: 280, width: 45, height: 60 },
-        hazards: [],
-        chocolates: [] // GÜNCELLEME: Süre kazandıran çikolatalar dizisi
+        chocolates: [] 
     };
 
     let currentX = 160;
     let currentY = 240 + Math.floor(randomSeed() * 60);
 
     for (let i = 0; i < 4; i++) {
-        let pWidth = Math.max(125 - (difficulty * 12) - Math.floor(randomSeed() * 25), 50);
-        let stepGap = 115 + (difficulty * 10) + Math.floor(randomSeed() * 30);
+        let pWidth = Math.max(120 - (difficulty * 11) - Math.floor(randomSeed() * 20), 45);
+        let stepGap = 120 + (difficulty * 9) + Math.floor(randomSeed() * 25);
 
         let pType = 'normal';
         let rType = randomSeed();
-        if (lvl > 4 && rType > 0.65) pType = 'crumbling';
-        if (lvl > 10 && rType <= 0.35) pType = 'moving';
-        if (lvl > 25 && rType > 0.35 && rType <= 0.65) pType = 'crumbling';
+        
+        if (lvl > 2 && rType > 0.80) pType = 'wall'; // Turuncu dikey sütun (Duvar Zıplaması için)
+        else if (lvl > 4 && rType > 0.60) pType = 'crumbling'; // Kırılan platformlar
+        else if (lvl > 10 && rType <= 0.35) pType = 'moving'; // Hareketli platformlar
 
         levelData.platforms.push({ 
-            x: currentX, 
-            y: currentY, 
-            width: pWidth, 
-            height: 15, 
-            type: pType,
-            startY: currentY,
-            startX: currentX,
-            range: 35 + (difficulty * 12) + Math.floor(randomSeed() * 20),
-            speed: 0.015 + (difficulty * 0.008) + (randomSeed() * 0.01),
-            angle: randomSeed() * Math.PI * 2,
-            moveDir: randomSeed() > 0.5 ? 'vertical' : 'horizontal',
-            stepped: false,
-            stepTime: 0,
-            broken: false
+            x: currentX, y: currentY, width: pType === 'wall' ? 24 : pWidth, height: pType === 'wall' ? 130 : 15, 
+            type: pType, startY: currentY, startX: currentX,
+            range: 35 + (difficulty * 12), speed: 0.015 + (difficulty * 0.005),
+            angle: randomSeed() * Math.PI * 2, moveDir: randomSeed() > 0.5 ? 'vertical' : 'horizontal',
+            stepped: false, stepTime: 0, broken: false
         });
 
-        // GÜNCELLEME: Platformların üzerine bazen süre veren Altın Çikolatalar yerleştir
-        if (randomSeed() > 0.5) {
-            levelData.chocolates.push({
-                x: currentX + (pWidth / 2) - 8,
-                y: currentY - 25,
-                width: 16,
-                height: 16,
-                collected: false
-            });
+        if (randomSeed() > 0.45) {
+            levelData.chocolates.push({ x: currentX + 10, y: currentY - 25, width: 16, height: 16, collected: false });
         }
 
-        if (lvl > 3 && randomSeed() > 0.3) {
-            levelData.hazards.push({ 
-                x: currentX + 10, 
-                y: currentY - 26, 
-                width: 26, 
-                height: 26, 
-                type: 'cat',
-                platIndex: levelData.platforms.length - 1,
-                dir: randomSeed() > 0.5 ? 1 : -1,
-                speed: 1.1 + (difficulty * 0.35) + (randomSeed() * 0.5),
-                velY: 0,
-                isGrounded: true,
-                jumpTimer: 40 + Math.floor(randomSeed() * 100)
-            });
-        }
-
-        if (lvl > 15 && randomSeed() > 0.7 && pType !== 'crumbling') {
-            levelData.hazards.push({ 
-                x: currentX + Math.floor(randomSeed() * (pWidth - 20)), 
-                y: currentY - 40 - Math.floor(randomSeed() * 30), 
-                width: 22, 
-                height: 22, 
-                type: 'darkness' 
-            });
-        }
-
-        if (i === Math.floor(randomSeed() * 3) + 1 || i === 2) {
-            levelData.dotPiece.x = currentX + (pWidth / 2) - 12;
-            levelData.dotPiece.y = currentY - 35 - Math.floor(randomSeed() * 20);
+        if (i === 2) {
+            levelData.dotPiece.x = currentX + 10;
+            levelData.dotPiece.y = currentY - 35;
         }
 
         currentX += stepGap;
@@ -396,56 +218,52 @@ function generateLevel(lvl) {
 }
 
 let activeLevel = generateLevel(currentLevel);
-document.getElementById("levelText").innerText = currentLevel;
+updateHUD();
 
-const changeBtn = document.getElementById("changeCharBtn");
-changeBtn.innerText = characterList[activeCharIndex].name;
-changeBtn.style.backgroundColor = characterList[activeCharIndex].color;
-
-changeBtn.addEventListener("click", () => {
-    activeCharIndex++;
-    if (activeCharIndex > unlockedCharIndex) {
-        activeCharIndex = 0; 
-    }
-    changeBtn.innerText = characterList[activeCharIndex].name;
-    changeBtn.style.backgroundColor = characterList[activeCharIndex].color;
-    changeBtn.classList.remove("active");
-});
-
-document.getElementById("resetGameBtn").addEventListener("click", () => {
-    if(confirm("Tüm ilerlemeni ve açtığın karakterleri sıfırlamak istediğine emin misin?")) {
-        localStorage.clear();
-        currentLevel = 1;
-        unlockedCharIndex = 0;
-        activeCharIndex = 0;
-        levelTimer = 25;
-        levelPieceCollected = false;
-        activeLevel = generateLevel(currentLevel);
-        document.getElementById("levelText").innerText = currentLevel;
-        document.getElementById("piecesText").innerText = "0 / 1";
-        changeBtn.innerText = characterList[activeCharIndex].name;
-        changeBtn.style.backgroundColor = characterList[activeCharIndex].color;
-        changeBtn.classList.remove("active");
-        resetPosition(true); 
-    }
-});
+function updateHUD() {
+    document.getElementById("levelText").innerText = currentLevel;
+    let curChar = characterList[activeCharIndex];
+    document.getElementById("charDisplay").innerText = curChar.name;
+    document.getElementById("charDisplay").style.backgroundColor = curChar.color;
+}
 
 function checkCollision(obj1, obj2) {
     return obj1.x < obj2.x + obj2.width &&
-           obj1.x + (obj1.w || obj1.width) > obj2.x &&
+           obj1.x + obj1.w > obj2.x &&
            obj1.y < obj2.y + obj2.height &&
-           obj1.y + (obj1.h || obj1.height) > obj2.y;
+           obj1.y + obj1.h > obj2.y;
 }
 
+// BELİRTTİĞİN TV KUMANDA DÜZENİ (Sarı, Turuncu, Yeşil, Pembe ve Geri Tuşu)
 window.addEventListener("keydown", (e) => {
-    if (e.code === "ArrowLeft" || e.code === "KeyA") keys.left = true;
-    if (e.code === "ArrowRight" || e.code === "KeyD") keys.right = true;
-    if (e.code === "ArrowUp" || e.code === "Space" || e.code === "KeyW") keys.jump = true;
+    if ([37, 38, 39, 40, 8, 461].includes(e.keyCode)) e.preventDefault();
+
+    if (e.keyCode === 37) { keys.left = true; keys.right = false; } // Sarı -> Sol
+    if (e.keyCode === 39) { keys.right = true; keys.left = false; } // Turuncu -> Sağ
+    if (e.keyCode === 38) { keys.jump = true; } // Yeşil -> Zıplama
+    
+    if (e.keyCode === 40) { // Pembe -> Dash (Aşağı Tuşu)
+        if (player.canDash && !player.dashActive) {
+            player.dashActive = true;
+            player.dashTimer = 10; 
+            player.velX = (keys.right ? 16 : (keys.left ? -16 : 16));
+            player.velY = 0;
+            player.canDash = false;
+            createParticles(player.x, player.y, "#38bdf8", 12);
+        }
+    }
+
+    if (e.keyCode === 8 || e.keyCode === 461) { // Kumanda Geri Tuşu -> Karakter Değiştirme
+        activeCharIndex++;
+        if (activeCharIndex > unlockedCharIndex || activeCharIndex >= characterList.length) {
+            activeCharIndex = 0;
+        }
+        updateHUD();
+    }
 });
+
 window.addEventListener("keyup", (e) => {
-    if (e.code === "ArrowLeft" || e.code === "KeyA") keys.left = false;
-    if (e.code === "ArrowRight" || e.code === "KeyD") keys.right = false;
-    if (e.code === "ArrowUp" || e.code === "Space" || e.code === "KeyW") keys.jump = false;
+    if (e.keyCode === 38) keys.jump = false;
 });
 
 function update() {
@@ -454,75 +272,23 @@ function update() {
         levelTimer--;
         document.getElementById("timerText").innerText = levelTimer;
         lastTimeUpdate = now;
-
-        if (levelTimer <= 0) {
-            triggerDamageEffect();
-            resetPosition(true); 
-            return;
-        }
+        if (levelTimer <= 0) { resetPosition(true); return; }
     }
 
-    // GÜNCELLEME: Squeak Karakterine Özel Yetenek/Mekanik Entegrasyonu
-    let curCharName = characterList[activeCharIndex].name;
-    if (curCharName === "Squeak") {
-        player.speed = 5.3; // %20 Daha Hızlı Koşar
-        friction = 0.92;    // Jöle gibi kayar, durması daha zordur!
+    let curChar = characterList[activeCharIndex];
+    player.speed = curChar.speed;
+    friction = (curChar.name === "Squeak") ? 0.92 : 0.80;
+
+    if (player.dashActive) {
+        player.dashTimer--;
+        player.velY = 0; 
+        if (player.dashTimer <= 0) player.dashActive = false;
     } else {
-        player.speed = 4.4;
-        friction = 0.80;
+        if (keys.left) player.velX = -player.speed;
+        if (keys.right) player.velX = player.speed;
+        player.velX *= friction;
+        player.velY += gravity;
     }
-
-    if (keys.left) { if (player.velX > -player.speed) player.velX -= 0.85; }
-    if (keys.right) { if (player.velX < player.speed) player.velX += 0.85; }
-    if (keys.jump && !player.jumping && player.grounded) {
-        player.jumping = true;
-        player.grounded = false;
-        player.velY = -11.2;
-        // Zıplama Efekti (Toz partikülleri)
-        createParticles(player.x + player.w/2, player.y + player.h, '#ffffff', 6);
-    }
-
-    player.velX *= friction;
-    player.velY += gravity;
-    player.grounded = false;
-
-    activeLevel.platforms.forEach(p => {
-        if (p.broken) return;
-
-        if (p.type === 'moving') {
-            p.angle += p.speed;
-            if (p.moveDir === 'vertical') {
-                p.y = p.startY + Math.sin(p.angle) * p.range;
-            } else {
-                p.x = p.startX + Math.sin(p.angle) * p.range;
-            }
-        }
-
-        if (p.type === 'crumbling' && p.stepped) {
-            if (Date.now() - p.stepTime > 1000) {
-                p.broken = true; 
-                createParticles(p.x + p.width/2, p.y + p.height/2, '#e67e22', 8);
-            }
-        }
-
-        if (player.x + player.w > p.x && player.x < p.x + p.width &&
-            player.y + player.h <= p.y + 10 && player.y + player.h + player.velY >= p.y) {
-
-            player.grounded = true;
-            player.jumping = false;
-            player.velY = 0;
-            player.y = p.y - player.h;
-
-            if (p.type === 'moving' && p.moveDir === 'horizontal') {
-                player.x += Math.cos(p.angle) * (p.range * p.speed); 
-            }
-
-            if (p.type === 'crumbling' && !p.stepped) {
-                p.stepped = true;
-                p.stepTime = Date.now();
-            }
-        }
-    });
 
     player.x += player.velX;
     player.y += player.velY;
@@ -530,289 +296,179 @@ function update() {
     if (player.x < 0) player.x = 0;
     if (player.x > canvas.width - player.w) player.x = canvas.width - player.w;
 
-    if (player.y > canvas.height) {
-        triggerDamageEffect();
-        resetPosition(true);
+    if (player.y > canvas.height) { resetPosition(true); }
+
+    player.grounded = false;
+    let isWallSliding = false;
+
+    activeLevel.platforms.forEach(p => {
+        if (p.broken) return;
+
+        if (p.type === 'moving') {
+            p.angle += p.speed;
+            if (p.moveDir === 'vertical') p.y = p.startY + Math.sin(p.angle) * p.range;
+            else p.x = p.startX + Math.sin(p.angle) * p.range;
+        }
+
+        if (p.type === 'crumbling' && p.stepped) {
+            if (Date.now() - p.stepTime > 1000) {
+                p.broken = true;
+                createParticles(p.x + p.width/2, p.y + p.height/2, '#10b981', 8);
+            }
+        }
+
+        if (player.x + player.w > p.x && player.x < p.x + p.width &&
+            player.y + player.h > p.y && player.y < p.y + p.height) {
+
+            if (p.type === 'wall') { // DUVAR ZIPLAMASI MANTIĞI
+                if (player.velY > 0) {
+                    player.velY = 1.2; 
+                    isWallSliding = true;
+                }
+                if (keys.jump && isWallSliding) {
+                    player.velY = curChar.jump * 0.95;
+                    player.velX = (player.x < p.x) ? -8 : 8;
+                    player.dashActive = false;
+                    keys.jump = false;
+                    createParticles(player.x, player.y, "#f59e0b", 5);
+                }
+            } else { 
+                if (player.y + player.h <= p.y + 12 && player.velY >= 0) {
+                    player.grounded = true;
+                    player.jumping = false;
+                    player.velY = 0;
+                    player.y = p.y - player.h;
+                    player.canDash = true; 
+
+                    if (p.type === 'moving' && p.moveDir === 'horizontal') {
+                        player.x += Math.cos(p.angle) * (p.range * p.speed); 
+                    }
+                    if (p.type === 'crumbling' && !p.stepped) {
+                        p.stepped = true; p.stepTime = Date.now();
+                    }
+                }
+            }
+        }
+    });
+
+    if (keys.jump && player.grounded && !player.jumping) {
+        player.jumping = true;
+        player.grounded = false;
+        player.velY = curChar.jump;
+        createParticles(player.x + player.w/2, player.y + player.h, '#ffffff', 5);
     }
 
-    // GÜNCELLEME: Çikolata toplama mekaniği kontrolü (+3sn bonus)
     activeLevel.chocolates.forEach(choc => {
         if (!choc.collected && checkCollision(player, choc)) {
             choc.collected = true;
             levelTimer += 3;
-            document.getElementById("timerText").innerText = levelTimer;
-            
-            // HUD Animasyonu tetikle
-            let badge = document.getElementById("timeBadge");
-            badge.classList.remove("time-bonus");
-            void badge.offsetWidth; // DOM tetikleyici sıfırlama
-            badge.classList.add("time-bonus");
-            
-            createParticles(choc.x + 8, choc.y + 8, '#f1c40f', 10);
+            createParticles(choc.x + 8, choc.y + 8, '#f1c40f', 8);
         }
     });
-
-    activeLevel.hazards.forEach(h => {
-        if (h.type === 'cat') {
-            let plat = activeLevel.platforms[h.platIndex];
-            if (plat.broken) {
-                h.y += 5;
-                return;
-            }
-
-            if (plat.type === 'moving' && plat.moveDir === 'horizontal') {
-                h.x = plat.x + (h.xOffset || 10);
-            } else {
-                h.x += h.speed * h.dir;
-                if (h.x <= plat.x || h.x + h.width >= plat.x + plat.width) {
-                    h.dir *= -1;
-                }
-            }
-            h.y = plat.y - h.height;
-
-            h.jumpTimer--;
-            if (h.jumpTimer <= 0 && h.isGrounded) {
-                h.velY = -6.5;
-                h.isGrounded = false;
-                h.jumpTimer = 70 + Math.random() * 100;
-            }
-
-            if (!h.isGrounded) {
-                h.velY += 0.32;
-                h.y += h.velY;
-                if (h.y >= plat.y - h.height) {
-                    h.y = plat.y - h.height;
-                    h.velY = 0;
-                    h.isGrounded = true;
-                }
-            }
-            h.xOffset = h.x - plat.x;
-        }
-
-        if (checkCollision(player, h) && (!platOrHazardBroken(h))) {
-            triggerDamageEffect();
-            resetPosition(true); 
-        }
-    });
-
-    function platOrHazardBroken(h) {
-        if (h.platIndex !== undefined && activeLevel.platforms[h.platIndex].broken) return true;
-        return false;
-    }
 
     if (!levelPieceCollected && checkCollision(player, activeLevel.dotPiece)) {
         levelPieceCollected = true;
         document.getElementById("piecesText").innerText = "1 / 1";
-        createParticles(activeLevel.dotPiece.x + 12, activeLevel.dotPiece.y + 12, '#00ffff', 15);
+        createParticles(activeLevel.dotPiece.x + 12, activeLevel.dotPiece.y + 12, '#00ffff', 10);
     }
 
     if (levelPieceCollected && checkCollision(player, activeLevel.portal)) {
         currentLevel++;
-        saveProgress(); 
-
         if (currentLevel <= 150) {
-            activeLevel = generateLevel(currentLevel);
-            levelPieceCollected = false;
-            document.getElementById("levelText").innerText = currentLevel;
-            document.getElementById("piecesText").innerText = "0 / 1";
-            canvas.style.background = `hsl(${(currentLevel * 55) % 360}, 30%, 22%)`;
-
-            // GÜNCELLEME: Karakter açma baremi 7 karaktere göre uyarlandı
             if (currentLevel % 5 === 1 && currentLevel > 1) {
                 let nextTargetIndex = Math.floor((currentLevel - 1) / 5);
                 if (nextTargetIndex < characterList.length) {
                     unlockedCharIndex = nextTargetIndex;
-                    saveProgress();
-                    if (unlockedCharIndex > activeCharIndex) {
-                        changeBtn.classList.add("active");
-                    }
                 }
             }
-            resetPosition(true); 
-        } else {
-            alert("TEBRİKLER! Tüm serüveni tamamladın! 🏆");
-            currentLevel = 1;
             saveProgress();
+            activeLevel = generateLevel(currentLevel);
+            resetPosition(true);
+        } else {
+            alert("TEBRİKLER! TÜM HARDCORE ARENAYI BİTİRDİNİZ! 🏆");
+            currentLevel = 1; unlockedCharIndex = 0; activeCharIndex = 0;
+            saveProgress();
+            activeLevel = generateLevel(currentLevel);
+            resetPosition(true);
         }
     }
 
-    // Partikülleri güncelle
     for (let i = particles.length - 1; i >= 0; i--) {
-        let p = particles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        p.alpha -= 0.025;
-        if (p.alpha <= 0) {
-            particles.splice(i, 1);
-        }
+        let p = particles[i]; p.x += p.vx; p.y += p.vy; p.alpha -= 0.03;
+        if (p.alpha <= 0) particles.splice(i, 1);
     }
-
-    // Portal dalga açısını büyüt
     portalPulseAngle += 0.05;
 }
 
-function triggerDamageEffect() {
-    flashRedFrames = 12; // 12 kare boyunca ekran kırmızı parlayacak
-}
-
 function resetPosition(resetTime) {
-    player.x = 60;
-    player.y = 200;
-    player.velX = 0;
-    player.velY = 0;
-
+    player.x = 60; player.y = 200; player.velX = 0; player.velY = 0;
+    player.dashActive = false; player.canDash = true;
     levelPieceCollected = false;
     document.getElementById("piecesText").innerText = "0 / 1";
-
-    if (resetTime) {
-        levelTimer = 25; 
-        document.getElementById("timerText").innerText = levelTimer;
-    }
-
-    activeLevel.platforms.forEach(p => {
-        if (p.type === 'crumbling') {
-            p.stepped = false;
-            p.broken = false;
-        }
-    });
-    
-    // Çikolataları da sıfırla
-    if(activeLevel.chocolates) {
-        activeLevel.chocolates.forEach(choc => choc.collected = false);
-    }
+    if (resetTime) levelTimer = 25;
+    updateHUD();
+    activeLevel.platforms.forEach(p => { if (p.type === 'crumbling') { p.stepped = false; p.broken = false; } });
+    activeLevel.chocolates.forEach(choc => choc.collected = false);
 }
 
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Platformları Çiz
+    // Platform Çizimleri
     activeLevel.platforms.forEach(p => {
         if (p.broken) return;
-
-        if (p.type === 'normal') ctx.fillStyle = "#2ecc71"; 
-        else if (p.type === 'moving') ctx.fillStyle = "#3498db"; 
-        else if (p.type === 'crumbling') {
-            if (p.stepped) {
-                let elapsed = Date.now() - p.stepTime;
-                ctx.fillStyle = elapsed > 650 ? "#e74c3c" : "#f1c40f";
-            } else {
-                ctx.fillStyle = "#e67e22"; 
-            }
-        }
+        if (p.type === 'normal') ctx.fillStyle = "#047857"; 
+        else if (p.type === 'moving') ctx.fillStyle = "#1d4ed8"; 
+        else if (p.type === 'wall') ctx.fillStyle = "#b45309"; // Duvar rengi (Turuncu sütunlar)
+        else if (p.type === 'crumbling') ctx.fillStyle = p.stepped ? "#b91c1c" : "#78350f";
+        
         ctx.fillRect(p.x, p.y, p.width, p.height);
+        ctx.fillStyle = "#10b981";
+        ctx.fillRect(p.x, p.y, p.width, 3); 
     });
 
-    // GÜNCELLEME: Altın Çikolataları Çiz (Süre Veren Ögeler)
-    if (activeLevel.chocolates) {
-        activeLevel.chocolates.forEach(choc => {
-            if (choc.collected) return;
-            ctx.fillStyle = "#f1c40f"; // Altın Çikolata Sarısı
-            ctx.fillRect(choc.x, choc.y, choc.width, choc.height);
-            // Çikolata dokusu için küçük bir çizgi
-            ctx.fillStyle = "#d35400";
-            ctx.fillRect(choc.x + 4, choc.y + 4, 8, 8);
-        });
-    }
-
-    // Engelleri Çiz
-    activeLevel.hazards.forEach(h => {
-        if (h.platIndex !== undefined && activeLevel.platforms[h.platIndex].broken) return;
-
-        if (h.type === 'cat') {
-            ctx.fillStyle = '#ff4757'; 
-            ctx.fillRect(h.x, h.y, h.width, h.height);
-            ctx.fillStyle = '#fff';
-            ctx.fillRect(h.x + (h.dir == 1 ? 16 : 4), h.y + 6, 5, 5);
-        } else {
-            ctx.fillStyle = '#000000'; 
-            ctx.fillRect(h.x, h.y, h.width, h.height);
-        }
+    // Çikolatalar
+    activeLevel.chocolates.forEach(choc => {
+        if (choc.collected) return;
+        ctx.fillStyle = "#f1c40f"; ctx.fillRect(choc.x, choc.y, choc.width, choc.height);
     });
 
-    // Dot Parçasını Çiz
+    // Parça Görseli Çizimi (Dot.jpg varsa yüklenir, yoksa mavi yuvarlak çizilir)
     if (!levelPieceCollected) {
-        if (images.Dot.complete && images.Dot.naturalWidth !== 0) {
+        if (images.Dot && images.Dot.complete && images.Dot.naturalWidth !== 0) {
             ctx.drawImage(images.Dot, activeLevel.dotPiece.x, activeLevel.dotPiece.y, activeLevel.dotPiece.width, activeLevel.dotPiece.height);
         } else {
-            ctx.fillStyle = "#00ffff";
-            ctx.beginPath();
-            ctx.arc(activeLevel.dotPiece.x + 12, activeLevel.dotPiece.y + 12, 10, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.fillStyle = "#00ffff"; ctx.beginPath();
+            ctx.arc(activeLevel.dotPiece.x + 12, activeLevel.dotPiece.y + 12, 9, 0, Math.PI * 2); ctx.fill();
         }
     }
 
-    // GÜNCELLEME: Portala Dönüş Haresi Efekti Eklendi
-    let portalPulse = Math.sin(portalPulseAngle) * 6;
-    ctx.fillStyle = levelPieceCollected ? "rgba(155, 89, 182, 0.4)" : "rgba(127, 140, 141, 0.2)";
-    ctx.fillRect(activeLevel.portal.x - portalPulse/2, activeLevel.portal.y - portalPulse/2, activeLevel.portal.width + portalPulse, activeLevel.portal.height + portalPulse);
-
-    ctx.fillStyle = levelPieceCollected ? "#9b59b6" : "#7f8c8d";
+    // Portal
+    ctx.fillStyle = levelPieceCollected ? "#8b5cf6" : "#4b5563";
     ctx.fillRect(activeLevel.portal.x, activeLevel.portal.y, activeLevel.portal.width, activeLevel.portal.height);
 
-    // Aktif Karakteri Çiz
+    // KARAKTER GÖRSELİ ÇİZİMİ (Örn: Moosey.jpg vb. varsa yüklenir, yoksa düz renk çizilir)
     let curChar = characterList[activeCharIndex];
     if (images[curChar.name] && images[curChar.name].complete && images[curChar.name].naturalWidth !== 0) {
         ctx.drawImage(images[curChar.name], player.x, player.y, player.w, player.h);
     } else {
         ctx.fillStyle = curChar.color;
         ctx.fillRect(player.x, player.y, player.w, player.h);
-        ctx.fillStyle = "#fff";
-        ctx.font = "bold 11px Arial";
-        ctx.fillText(curChar.letter, player.x + (player.w/2) - (curChar.letter.length * 3.5), player.y + 21);
+        ctx.fillStyle = "#000"; ctx.font = "bold 11px Arial";
+        ctx.fillText(curChar.letter, player.x + 8, player.y + 20);
     }
 
-    // Partikülleri Çiz
+    // Partiküller
     particles.forEach(p => {
-        ctx.save();
-        ctx.globalAlpha = p.alpha;
-        ctx.fillStyle = p.color;
-        ctx.fillRect(p.x, p.y, p.size, p.size);
-        ctx.restore();
+        ctx.save(); ctx.globalAlpha = p.alpha; ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, p.size, p.size); ctx.restore();
     });
 
-    // GÜNCELLEME: Hasar/Yarın Kalma Durumunda Ekranı Kırmızı Flaşa Boya
-    if (flashRedFrames > 0) {
-        ctx.fillStyle = `rgba(255, 0, 0, ${flashRedFrames / 30})`;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        flashRedFrames--;
-    }
-
-    // CANVAS BUTONLARININ ÇİZİMİ
-    for (let key in canvasButtons) {
-        let btn = canvasButtons[key];
-
-        ctx.save();
-        if (key === "jump") {
-            ctx.fillStyle = btn.active ? "#c0392b" : "#e74c3c";
-        } else {
-            ctx.fillStyle = btn.active ? "#34495e" : "#2c3e50";
-        }
-
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 3;
-
-        ctx.beginPath();
-        ctx.arc(btn.x, btn.y, btn.r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = "#ffffff";
-        ctx.font = `bold ${key === 'jump' ? '32px' : '26px'} Arial`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(btn.label, btn.x, btn.y + (key === 'jump' ? -2 : 1));
-        ctx.restore();
-    }
-}
-
-function gameLoop() {
     update();
-    draw();
-    requestAnimationFrame(gameLoop);
+    requestAnimationFrame(draw);
 }
 
-gameLoop();
+draw();
 </script>
-
 </body>
 </html>
